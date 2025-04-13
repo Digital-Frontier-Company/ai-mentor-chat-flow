@@ -5,24 +5,24 @@ import MentorApp from '@/components/MentorApp';
 
 const Index = () => {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-800">
-      <header className="py-6 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-zinc-950 shadow-sm">
-        <div className="container">
+    <div className="min-h-screen bg-zinc-950 text-white">
+      <header className="py-4 border-b border-zinc-800 bg-zinc-900">
+        <div className="container mx-auto px-4">
           <div className="flex justify-center">
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-indigo-500 to-purple-600 bg-clip-text text-transparent">
+            <h1 className="text-2xl font-bold text-emerald-500">
               AI Mentor Chat Flow
             </h1>
           </div>
         </div>
       </header>
       
-      <main>
+      <main className="py-8">
         <MentorProvider>
           <MentorApp />
         </MentorProvider>
       </main>
       
-      <footer className="py-6 text-center text-sm text-muted-foreground">
+      <footer className="py-6 text-center text-sm text-zinc-500 border-t border-zinc-800">
         <div className="container">
           <p>© {new Date().getFullYear()} AI Mentor Chat Flow. All rights reserved.</p>
         </div>

@@ -1,147 +1,125 @@
+import React, { createContext, useContext, useState } from 'react';
 
-import React, { createContext, useContext, useState, ReactNode } from 'react';
-
-// Define the types for our mentors
-export type MentorType = {
+export interface MentorType {
   id: string;
   name: string;
   icon: string;
   description: string;
   gradient: string;
-  systemPrompt: string;
-};
+  category: string;
+  expertise: string;
+  learningPath: Array<{
+    name: string;
+  }>;
+}
 
-// Define the user preferences type
-export type UserPreferences = {
+export interface UserPreferences {
   name: string;
   goal: string;
-  experience: string;
-};
+  experience: 'Beginner' | 'Intermediate' | 'Advanced';
+}
 
-// Define the type for our messages
-export type Message = {
-  id: string;
-  content: string;
-  role: 'user' | 'assistant';
-  createdAt: Date;
-};
-
-// Define the type for our context
-type MentorContextType = {
+interface MentorContextType {
+  currentStep: 'select' | 'customize' | 'chat';
   mentors: MentorType[];
   selectedMentor: MentorType | null;
   userPreferences: UserPreferences;
-  messages: Message[];
-  isTyping: boolean;
-  currentStep: 'select' | 'customize' | 'chat';
+  setCurrentStep: (step: 'select' | 'customize' | 'chat') => void;
   setSelectedMentor: (mentor: MentorType) => void;
   setUserPreferences: (preferences: UserPreferences) => void;
-  addMessage: (content: string, role: 'user' | 'assistant') => void;
-  setIsTyping: (isTyping: boolean) => void;
-  setCurrentStep: (step: 'select' | 'customize' | 'chat') => void;
-  resetChat: () => void;
-};
+}
 
-// Create the context with a default value
-const MentorContext = createContext<MentorContextType | undefined>(undefined);
+export const MentorContext = createContext<MentorContextType | null>(null);
 
-// Define the props for our provider
-type MentorProviderProps = {
-  children: ReactNode;
-};
-
-// Define our default mentors
-const defaultMentors: MentorType[] = [
-  {
-    id: 'marketing',
-    name: 'Digital Marketing Mentor',
-    icon: '📱',
-    description: 'Expert guidance on digital marketing strategies, SEO, content marketing, and social media campaigns.',
-    gradient: 'from-mentor-blue to-mentor-purple',
-    systemPrompt: 'You are an expert Digital Marketing Mentor with extensive experience in SEO, content marketing, social media, and digital advertising. Your goal is to help the user improve their marketing strategies and achieve better results.'
-  },
-  {
-    id: 'fitness',
-    name: 'Fitness Coach',
-    icon: '💪',
-    description: 'Personalized workout plans, nutrition advice, and motivation to help you reach your fitness goals.',
-    gradient: 'from-mentor-teal to-mentor-blue',
-    systemPrompt: 'You are a professional Fitness Coach with expertise in strength training, cardio, nutrition, and holistic fitness. Your goal is to help the user achieve their fitness goals through personalized advice and motivation.'
-  },
-  {
-    id: 'career',
-    name: 'Career Advisor',
-    icon: '💼',
-    description: 'Strategic guidance on career development, job searching, resume building, and interview preparation.',
-    gradient: 'from-mentor-purple to-mentor-pink',
-    systemPrompt: 'You are an experienced Career Advisor with deep knowledge of various industries, job markets, resume writing, interview techniques, and career development. Your goal is to help the user advance in their career path.'
-  },
-  {
-    id: 'finance',
-    name: 'Financial Advisor',
-    icon: '💰',
-    description: 'Expert advice on personal finance, investments, budgeting, and financial planning for your future.',
-    gradient: 'from-emerald-500 to-teal-700',
-    systemPrompt: 'You are a knowledgeable Financial Advisor with expertise in personal finance, investments, budgeting, and financial planning. Your goal is to help the user make informed financial decisions and improve their financial well-being.'
-  }
-];
-
-// Create the provider component
-export const MentorProvider = ({ children }: MentorProviderProps) => {
-  const [mentors] = useState<MentorType[]>(defaultMentors);
+export const MentorProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [currentStep, setCurrentStep] = useState<'select' | 'customize' | 'chat'>('select');
   const [selectedMentor, setSelectedMentor] = useState<MentorType | null>(null);
   const [userPreferences, setUserPreferences] = useState<UserPreferences>({
     name: '',
     goal: '',
-    experience: ''
+    experience: 'Beginner'
   });
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [isTyping, setIsTyping] = useState(false);
-  const [currentStep, setCurrentStep] = useState<'select' | 'customize' | 'chat'>('select');
 
-  const addMessage = (content: string, role: 'user' | 'assistant') => {
-    const newMessage: Message = {
-      id: crypto.randomUUID(),
-      content,
-      role,
-      createdAt: new Date()
-    };
-    setMessages((prev) => [...prev, newMessage]);
-  };
+  const mentors: MentorType[] = [
+    {
+      id: 'business-strategy',
+      name: 'Business Strategy Coach',
+      icon: '💼',
+      description: 'Develop your business acumen with guidance on strategy, planning, and execution from an experienced mentor.',
+      gradient: 'from-mentor-blue to-purple-600',
+      category: 'business',
+      expertise: 'Business Strategy',
+      learningPath: [
+        { name: 'Business Model Analysis' },
+        { name: 'Market Research' },
+        { name: 'Competitive Analysis' },
+        { name: 'Strategic Planning' },
+        { name: 'Financial Planning' },
+        { name: 'Operations Management' },
+        { name: 'Growth Strategy' },
+        { name: 'Risk Management' },
+      ],
+    },
+    {
+      id: 'digital-marketing',
+      name: 'Digital Marketing Mentor',
+      icon: '📊',
+      description: 'Learn digital marketing strategies from an expert mentor. Master SEO, social media, content marketing, and paid advertising.',
+      gradient: 'from-mentor-teal to-emerald-500',
+      category: 'business',
+      expertise: 'Digital Marketing',
+      learningPath: [
+        { name: 'Digital Marketing Fundamentals' },
+        { name: 'SEO Optimization' },
+        { name: 'Social Media Strategy' },
+        { name: 'Content Marketing' },
+        { name: 'Email Marketing' },
+        { name: 'Paid Advertising' },
+        { name: 'Analytics and Reporting' },
+        { name: 'Marketing Automation' },
+      ],
+    },
+    {
+      id: 'data-science',
+      name: 'Data Science Expert',
+      icon: '📈',
+      description: 'Learn data science from fundamentals to advanced topics with hands-on guidance and practical examples.',
+      gradient: 'from-mentor-purple to-pink-500',
+      category: 'technology',
+      expertise: 'Data Science',
+      learningPath: [
+        { name: 'Statistics Fundamentals' },
+        { name: 'Python Programming' },
+        { name: 'Data Analysis' },
+        { name: 'Machine Learning Basics' },
+        { name: 'Data Visualization' },
+        { name: 'Advanced ML Algorithms' },
+        { name: 'Big Data Technologies' },
+        { name: 'Project Implementation' },
+      ],
+    },
+  ];
 
-  const resetChat = () => {
-    setMessages([]);
-    setCurrentStep('select');
-    setSelectedMentor(null);
-    setUserPreferences({
-      name: '',
-      goal: '',
-      experience: ''
-    });
-  };
-
-  const value = {
-    mentors,
-    selectedMentor,
-    userPreferences,
-    messages,
-    isTyping,
-    currentStep,
-    setSelectedMentor,
-    setUserPreferences,
-    addMessage,
-    setIsTyping,
-    setCurrentStep,
-    resetChat
-  };
-
-  return <MentorContext.Provider value={value}>{children}</MentorContext.Provider>;
+  return (
+    <MentorContext.Provider
+      value={{
+        currentStep,
+        mentors,
+        selectedMentor,
+        userPreferences,
+        setCurrentStep,
+        setSelectedMentor,
+        setUserPreferences,
+      }}
+    >
+      {children}
+    </MentorContext.Provider>
+  );
 };
 
-// Create a hook to use the context
 export const useMentor = () => {
   const context = useContext(MentorContext);
-  if (context === undefined) {
+  if (!context) {
     throw new Error('useMentor must be used within a MentorProvider');
   }
   return context;

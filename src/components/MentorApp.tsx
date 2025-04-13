@@ -22,7 +22,7 @@ const MentorApp: React.FC = () => {
   };
 
   return (
-    <div className="container py-8">
+    <div className="container py-8 max-w-full">
       {renderCurrentStep()}
     </div>
   );
