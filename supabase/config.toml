@@ -1,1 +1,5 @@
+
 project_id = "bapditcjlxctrisoixpg"
+
+[functions.chat-completion]
+verify_jwt = true

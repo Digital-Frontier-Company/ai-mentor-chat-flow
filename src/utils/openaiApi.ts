@@ -1,5 +1,6 @@
 
 import { Message, UserPreferences, MentorType } from '@/contexts/MentorContext';
+import { supabase } from "@/integrations/supabase/client";
 
 // Define a function to build the messages for the API request
 const buildMessages = (
@@ -7,23 +8,17 @@ const buildMessages = (
   userPreferences: UserPreferences,
   mentor: MentorType
 ) => {
-  // Create the system message with the mentor's prompt and user preferences
-  const systemMessage = {
-    role: 'system',
-    content: `${mentor.systemPrompt}\n\nUser Information:\n- Name: ${userPreferences.name}\n- Goal: ${userPreferences.goal}\n- Experience Level: ${userPreferences.experience}\n\nProvide personalized, specific advice and maintain a supportive, encouraging tone. Ask follow-up questions when needed.`
-  };
-
   // Convert our app messages to the format expected by the API
   const formattedMessages = messages.map((msg) => ({
     role: msg.role,
     content: msg.content
   }));
 
-  // Return an array with the system message first, followed by the conversation
-  return [systemMessage, ...formattedMessages];
+  // Return the conversation messages
+  return formattedMessages;
 };
 
-// Function to simulate streaming (will be replaced with actual API call later)
+// Function to simulate streaming (for development when API is not available)
 export const simulateStreamingResponse = (
   message: string,
   onProgress: (text: string) => void,
@@ -46,8 +41,7 @@ export const simulateStreamingResponse = (
   return () => clearInterval(interval); // Return a cleanup function
 };
 
-// For now, we'll simulate an API response
-// Note: In a real implementation, this would call the OpenAI API
+// Get mentor response using the edge function
 export const getMentorResponse = async (
   userMessage: string,
   previousMessages: Message[],
@@ -56,38 +50,50 @@ export const getMentorResponse = async (
   onProgress: (text: string) => void,
   onComplete: () => void
 ) => {
-  // In a real implementation, we would make an API call like this:
-  // const apiMessages = buildMessages(previousMessages, userPreferences, mentor);
-  // const response = await fetch('https://api.openai.com/v1/chat/completions', {
-  //   method: 'POST',
-  //   headers: {
-  //     'Content-Type': 'application/json',
-  //     'Authorization': `Bearer ${apiKey}`
-  //   },
-  //   body: JSON.stringify({
-  //     model: 'gpt-4o',
-  //     messages: apiMessages,
-  //     stream: true,
-  //   }),
-  // });
+  try {
+    // Format messages for the API
+    const apiMessages = buildMessages(previousMessages, userPreferences, mentor);
+    
+    // Add the new user message
+    apiMessages.push({
+      role: 'user',
+      content: userMessage
+    });
 
-  // For now, simulate a response based on the mentor type and user message
-  let simulatedResponse = '';
-  
-  if (userMessage.toLowerCase().includes('hello') || userMessage.toLowerCase().includes('hi')) {
-    simulatedResponse = `Hi ${userPreferences.name}! I'm your ${mentor.name.replace(' Mentor', '').replace(' Coach', '').replace(' Advisor', '')} guide. It's great to meet you. I understand your goal is to ${userPreferences.goal}. That's an excellent objective! With your ${userPreferences.experience} experience level, we can work together to develop strategies tailored to your needs. What specific aspect of ${mentor.name.toLowerCase().replace(' mentor', '').replace(' coach', '').replace(' advisor', '')} would you like to focus on first?`;
-  } else if (userMessage.toLowerCase().includes('goal') || userMessage.toLowerCase().includes('help')) {
-    simulatedResponse = `Absolutely! Based on your goal to ${userPreferences.goal}, I think we should approach this step by step. Given your ${userPreferences.experience} experience level, we'll need to focus on building a solid foundation first. Let me know what challenges you're facing right now, and we can develop a personalized plan to help you overcome them.`;
-  } else if (userMessage.toLowerCase().includes('advice') || userMessage.toLowerCase().includes('tip')) {
-    simulatedResponse = `Here's my advice tailored to your situation: since you want to ${userPreferences.goal} and you're at a ${userPreferences.experience} experience level, I recommend starting with fundamentals before advancing to more complex strategies. Would you like me to elaborate on any specific aspect of this approach?`;
-  } else if (userMessage.toLowerCase().includes('thank')) {
-    simulatedResponse = `You're very welcome, ${userPreferences.name}! I'm here to support you on your journey to ${userPreferences.goal}. Feel free to come back anytime you need guidance or want to discuss your progress. Remember, consistent small steps lead to significant achievements!`;
-  } else {
-    simulatedResponse = `That's an interesting question. As your ${mentor.name}, I'd suggest considering a few key factors related to ${userPreferences.goal}. Given your ${userPreferences.experience} experience level, it's important to balance ambition with realistic expectations. Would you like me to provide more specific guidance on this topic?`;
+    // Call our edge function
+    const { data, error } = await supabase.functions.invoke('chat-completion', {
+      body: {
+        messages: apiMessages,
+        userPreferences,
+        mentorId: mentor.id,
+      },
+    });
+
+    if (error) {
+      console.error('Error calling edge function:', error);
+      // Fall back to simulation if the API call fails
+      return simulateStreamingResponse(
+        `I'm sorry, I encountered an error while processing your request. ${error.message}`,
+        onProgress,
+        onComplete
+      );
+    }
+
+    // Extract the AI response
+    const aiResponse = data.choices[0].message.content;
+    
+    // Simulate streaming for now (in production, you would use a streaming API)
+    return simulateStreamingResponse(aiResponse, onProgress, onComplete);
+  } catch (error) {
+    console.error('Error in getMentorResponse:', error);
+    
+    // Fall back to simulation
+    return simulateStreamingResponse(
+      "I'm sorry, I encountered an error while processing your request. Please try again later.",
+      onProgress,
+      onComplete
+    );
   }
-
-  // Simulate streaming
-  return simulateStreamingResponse(simulatedResponse, onProgress, onComplete);
 };
 
 // Function to get a welcome message from the mentor
