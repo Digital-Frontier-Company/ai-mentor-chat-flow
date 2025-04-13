@@ -53,6 +53,12 @@ const CustomizationForm: React.FC = () => {
 
   if (!selectedMentor) return null;
 
+  // Handle experience level change with proper type checking
+  const handleExperienceChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const value = e.target.value as 'Beginner' | 'Intermediate' | 'Advanced';
+    setUserPreferences({ ...userPreferences, experience: value });
+  };
+
   return (
     <div className="max-w-2xl mx-auto w-full animate-fade-in">
       <Button 
@@ -111,9 +117,8 @@ const CustomizationForm: React.FC = () => {
                 id="experience"
                 className="w-full rounded-md border border-input bg-background px-3 py-2"
                 value={userPreferences.experience}
-                onChange={(e) => setUserPreferences({ ...userPreferences, experience: e.target.value })}
+                onChange={handleExperienceChange}
               >
-                <option value="">Select your experience level</option>
                 <option value="Beginner">Beginner</option>
                 <option value="Intermediate">Intermediate</option>
                 <option value="Advanced">Advanced</option>

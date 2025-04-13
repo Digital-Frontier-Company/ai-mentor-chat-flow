@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState } from 'react';
 
 export interface MentorType {
@@ -19,14 +20,25 @@ export interface UserPreferences {
   experience: 'Beginner' | 'Intermediate' | 'Advanced';
 }
 
+export interface Message {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+}
+
 interface MentorContextType {
   currentStep: 'select' | 'customize' | 'chat';
   mentors: MentorType[];
   selectedMentor: MentorType | null;
   userPreferences: UserPreferences;
+  messages: Message[];
+  isTyping: boolean;
   setCurrentStep: (step: 'select' | 'customize' | 'chat') => void;
   setSelectedMentor: (mentor: MentorType) => void;
   setUserPreferences: (preferences: UserPreferences) => void;
+  addMessage: (content: string, role: 'user' | 'assistant') => void;
+  setIsTyping: (isTyping: boolean) => void;
+  resetChat: () => void;
 }
 
 export const MentorContext = createContext<MentorContextType | null>(null);
@@ -39,6 +51,28 @@ export const MentorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     goal: '',
     experience: 'Beginner'
   });
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [isTyping, setIsTyping] = useState(false);
+
+  const addMessage = (content: string, role: 'user' | 'assistant') => {
+    const newMessage: Message = {
+      id: Date.now().toString(),
+      role,
+      content
+    };
+    setMessages(prev => [...prev, newMessage]);
+  };
+
+  const resetChat = () => {
+    setMessages([]);
+    setCurrentStep('select');
+    setSelectedMentor(null);
+    setUserPreferences({
+      name: '',
+      goal: '',
+      experience: 'Beginner'
+    });
+  };
 
   const mentors: MentorType[] = [
     {
@@ -107,9 +141,14 @@ export const MentorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         mentors,
         selectedMentor,
         userPreferences,
+        messages,
+        isTyping,
         setCurrentStep,
         setSelectedMentor,
         setUserPreferences,
+        addMessage,
+        setIsTyping,
+        resetChat,
       }}
     >
       {children}

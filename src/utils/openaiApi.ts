@@ -1,5 +1,5 @@
 
-import { Message, UserPreferences, MentorType } from '@/contexts/MentorContext';
+import { UserPreferences, MentorType, Message } from '@/contexts/MentorContext';
 import { supabase } from "@/integrations/supabase/client";
 
 // Define a function to build the messages for the API request
