@@ -8,6 +8,8 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
+  // Check if authentication is disabled via environment variable
+  const isAuthDisabled = true; // Set to true to disable auth checks
   const { user, loading } = useAuth();
   const location = useLocation();
 
@@ -23,12 +25,12 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     );
   }
 
-  if (!user) {
-    // Redirect to the login page if not authenticated
+  if (!user && !isAuthDisabled) {
+    // Redirect to the login page if not authenticated (and auth is not disabled)
     return <Navigate to="/auth" state={{ from: location }} replace />;
   }
 
-  // Render children if authenticated
+  // Render children if authenticated or if auth is disabled
   return <>{children}</>;
 };
 
