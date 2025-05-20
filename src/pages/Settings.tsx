@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useQuery, useMutation } from '@tanstack/react-query';
@@ -413,7 +414,44 @@ const SettingsPage = () => {
                     <div className="p-4 bg-zinc-800 rounded-lg border border-zinc-700">
                       <p className="mb-4">You don't have an active subscription. Subscribe to unlock premium features!</p>
                       
-                      <div className="grid grid-cols-1 gap-6">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <Card className="bg-zinc-800 border-zinc-700">
+                          <CardHeader>
+                            <CardTitle>3 Mentors</CardTitle>
+                            <div className="text-3xl font-bold">$29.99<span className="text-sm text-zinc-400">/month</span></div>
+                          </CardHeader>
+                          <CardContent>
+                            <ul className="space-y-2 mb-4">
+                              <li className="flex items-center">
+                                <svg className="w-5 h-5 text-lime-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                </svg>
+                                Use up to 3 mentors
+                              </li>
+                              <li className="flex items-center">
+                                <svg className="w-5 h-5 text-lime-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                </svg>
+                                Basic customization
+                              </li>
+                              <li className="flex items-center">
+                                <svg className="w-5 h-5 text-lime-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                </svg>
+                                Standard support
+                              </li>
+                            </ul>
+                          </CardContent>
+                          <CardFooter>
+                            <Button 
+                              onClick={() => createCheckoutSession('price_1RDBtOLdC3hp2fnCZFFd86j1')}
+                              className="w-full bg-lime-600 hover:bg-lime-700"
+                            >
+                              Subscribe Now
+                            </Button>
+                          </CardFooter>
+                        </Card>
+                      
                         <Card className="bg-zinc-800 border-zinc-700 border-lime-500">
                           <CardHeader>
                             <div className="flex justify-between items-center">
