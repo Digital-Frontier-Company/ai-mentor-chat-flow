@@ -41,7 +41,25 @@ export const simulateStreamingResponse = (
   return () => clearInterval(interval); // Return a cleanup function
 };
 
-// Get mentor response using the edge function
+// Parse the SSE data from OpenAI
+const parseOpenAIStreamData = (data: string) => {
+  // Handle the different message formats
+  if (data === '[DONE]') {
+    return { done: true };
+  }
+
+  try {
+    const json = JSON.parse(data);
+    const content = json.choices?.[0]?.delta?.content || '';
+    const done = json.choices?.[0]?.finish_reason === 'stop';
+    return { content, done };
+  } catch (e) {
+    console.error('Error parsing SSE data:', e);
+    return { content: '', done: false };
+  }
+};
+
+// Get mentor response using the edge function with true streaming
 export const getMentorResponse = async (
   userMessage: string,
   previousMessages: Message[],
@@ -60,34 +78,103 @@ export const getMentorResponse = async (
       content: userMessage
     });
 
-    // Call our edge function
-    const { data, error } = await supabase.functions.invoke('chat-completion', {
-      body: {
+    // Call our edge function with streaming enabled
+    const response = await fetch(`${supabase.functions.url}/chat-completion`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${supabase.auth.session()?.access_token || ''}`
+      },
+      body: JSON.stringify({
         messages: apiMessages,
         userPreferences,
         mentorId: mentor.id,
-      },
+        stream: true
+      })
     });
 
-    if (error) {
-      console.error('Error calling edge function:', error);
-      // Fall back to simulation if the API call fails
-      return simulateStreamingResponse(
-        `I'm sorry, I encountered an error while processing your request. ${error.message}`,
-        onProgress,
-        onComplete
-      );
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Error from edge function: ${errorText}`);
     }
 
-    // Extract the AI response
-    const aiResponse = data.choices[0].message.content;
+    // Check if we got a streaming response
+    const contentType = response.headers.get('Content-Type') || '';
     
-    // Simulate streaming for now (in production, you would use a streaming API)
-    return simulateStreamingResponse(aiResponse, onProgress, onComplete);
+    if (contentType.includes('text/event-stream')) {
+      // Handle streaming response
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+      let fullText = '';
+
+      if (!reader) {
+        throw new Error('Stream reader not available');
+      }
+
+      // Process the stream
+      const processStream = async () => {
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            
+            if (done) {
+              onComplete();
+              break;
+            }
+            
+            // Decode the chunk and process the events
+            const chunk = decoder.decode(value, { stream: true });
+            const lines = chunk
+              .split('\n')
+              .filter(line => line.trim().startsWith('data: '));
+
+            for (const line of lines) {
+              const data = line.replace(/^data: /, '').trim();
+              
+              const { content, done } = parseOpenAIStreamData(data);
+              
+              if (content) {
+                fullText += content;
+                onProgress(fullText);
+              }
+              
+              if (done) {
+                onComplete();
+                return;
+              }
+            }
+          }
+        } catch (error) {
+          console.error('Error processing stream:', error);
+          onComplete();
+        }
+      };
+
+      // Start processing the stream
+      processStream();
+      
+      // Return a cleanup function
+      return () => {
+        reader.cancel('User cancelled the stream').catch(console.error);
+      };
+    } else {
+      // Handle non-streaming response (fallback)
+      const data = await response.json();
+      
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
+      // Extract the AI response
+      const aiResponse = data.choices[0].message.content;
+      
+      // Fall back to simulated streaming
+      return simulateStreamingResponse(aiResponse, onProgress, onComplete);
+    }
   } catch (error) {
     console.error('Error in getMentorResponse:', error);
     
-    // Fall back to simulation
+    // Fall back to simulation with error message
     return simulateStreamingResponse(
       "I'm sorry, I encountered an error while processing your request. Please try again later.",
       onProgress,

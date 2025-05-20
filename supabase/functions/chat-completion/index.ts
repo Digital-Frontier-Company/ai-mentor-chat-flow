@@ -31,7 +31,7 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const body = await req.json();
-    const { messages, userPreferences, mentorId } = body;
+    const { messages, userPreferences, mentorId, stream = true } = body;
 
     if (!messages || !Array.isArray(messages)) {
       throw new Error("Invalid messages format");
@@ -49,7 +49,7 @@ serve(async (req) => {
       if (mentorError) {
         console.error("Error fetching mentor:", mentorError);
       } else if (mentor) {
-        mentorPrompt = `You are a ${mentor.name}. ${mentor.description}`;
+        mentorPrompt = mentor.system_prompt || `You are a ${mentor.name}. ${mentor.description}`;
       }
     }
 
@@ -66,31 +66,57 @@ serve(async (req) => {
     // Format messages for OpenAI
     const formattedMessages = [systemMessage, ...messages];
 
-    // Call OpenAI API
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${OPENAI_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "gpt-4o",
-        messages: formattedMessages,
-        temperature: 0.7,
-        max_tokens: 1000,
-      }),
-    });
+    // If stream is true, use streaming response
+    if (stream) {
+      // Create a streaming request to OpenAI
+      const response = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${OPENAI_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "gpt-4o",
+          messages: formattedMessages,
+          temperature: 0.7,
+          stream: true, // Enable streaming
+        }),
+      });
 
-    const data = await response.json();
+      // Return the streaming response directly
+      return new Response(response.body, {
+        headers: { 
+          ...corsHeaders, 
+          "Content-Type": "text/event-stream"
+        },
+      });
+    } else {
+      // Non-streaming response (legacy support)
+      const response = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${OPENAI_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "gpt-4o",
+          messages: formattedMessages,
+          temperature: 0.7,
+          max_tokens: 1000,
+        }),
+      });
 
-    if (data.error) {
-      throw new Error(data.error.message);
+      const data = await response.json();
+
+      if (data.error) {
+        throw new Error(data.error.message);
+      }
+
+      // Return the AI response
+      return new Response(JSON.stringify(data), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
-
-    // Return the AI response
-    return new Response(JSON.stringify(data), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
   } catch (error) {
     console.error("Error processing request:", error);
     return new Response(

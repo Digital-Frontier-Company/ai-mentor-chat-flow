@@ -3,9 +3,10 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useMentor } from '@/contexts/MentorContext';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { ArrowLeft, Send } from 'lucide-react';
 import { getMentorResponse } from '@/utils/openaiApi';
+import { useToast } from '@/hooks/use-toast';
 
 const ChatInterface: React.FC = () => {
   const { 
@@ -21,8 +22,10 @@ const ChatInterface: React.FC = () => {
   
   const [userInput, setUserInput] = useState('');
   const [currentResponse, setCurrentResponse] = useState('');
+  const [streamCleanup, setStreamCleanup] = useState<(() => void) | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const { toast } = useToast();
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -31,6 +34,15 @@ const ChatInterface: React.FC = () => {
   useEffect(() => {
     scrollToBottom();
   }, [messages, currentResponse]);
+
+  useEffect(() => {
+    // Cleanup function for any active streams when component unmounts
+    return () => {
+      if (streamCleanup) {
+        streamCleanup();
+      }
+    };
+  }, [streamCleanup]);
 
   const handleSendMessage = async () => {
     if (!userInput.trim() || isTyping || !selectedMentor) return;
@@ -44,28 +56,45 @@ const ChatInterface: React.FC = () => {
     // Set typing state
     setIsTyping(true);
     setCurrentResponse('');
+    
+    // Cancel any existing stream
+    if (streamCleanup) {
+      streamCleanup();
+      setStreamCleanup(null);
+    }
 
-    // Get and stream response
-    const stopStreaming = await getMentorResponse(
-      userInput.trim(),
-      messages,
-      userPreferences,
-      selectedMentor,
-      (text) => {
-        setCurrentResponse(text);
-      },
-      () => {
-        // When streaming complete
-        addMessage(currentResponse, 'assistant');
-        setCurrentResponse('');
-        setIsTyping(false);
-      }
-    );
-
-    // Cleanup function
-    return () => {
-      if (stopStreaming) stopStreaming();
-    };
+    try {
+      // Get and stream response
+      const cleanup = await getMentorResponse(
+        userInput.trim(),
+        messages,
+        userPreferences,
+        selectedMentor,
+        (text) => {
+          setCurrentResponse(text);
+        },
+        () => {
+          // When streaming complete
+          if (currentResponse) {
+            addMessage(currentResponse, 'assistant');
+          }
+          setCurrentResponse('');
+          setIsTyping(false);
+          setStreamCleanup(null);
+        }
+      );
+      
+      // Store the cleanup function
+      setStreamCleanup(() => cleanup);
+    } catch (error) {
+      console.error('Error getting mentor response:', error);
+      toast({
+        title: "Error",
+        description: "Failed to get a response from the mentor. Please try again.",
+        variant: "destructive",
+      });
+      setIsTyping(false);
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -76,6 +105,11 @@ const ChatInterface: React.FC = () => {
   };
 
   const handleBack = () => {
+    // Cancel any active streams before resetting
+    if (streamCleanup) {
+      streamCleanup();
+    }
+    
     if (window.confirm('This will reset your chat. Are you sure?')) {
       resetChat();
     }
