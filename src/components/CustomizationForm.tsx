@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useMentor } from '@/contexts/MentorContext';
 import { Button } from '@/components/ui/button';
@@ -49,11 +48,11 @@ const CustomizationForm: React.FC = () => {
 
   // Pre-fill mentor name from template if available
   useEffect(() => {
-    if (templateDetails?.default_mentor_name && !userPreferences.name) {
-      setUserPreferences(prev => ({
-        ...prev,
+    if (templateDetails?.default_mentor_name && !userPreferences.mentorName) {
+      setUserPreferences({
+        ...userPreferences,
         mentorName: templateDetails.default_mentor_name
-      }));
+      });
     }
   }, [templateDetails]);
 
