@@ -32,7 +32,8 @@ serve(async (req) => {
       templateId = null,
       color = "#3f88c5", 
       customPrompt = null, 
-      userId = null 
+      userId = null,
+      icon = "🧠"
     } = await req.json();
     
     if (!name || !description) {
@@ -46,7 +47,7 @@ serve(async (req) => {
       const { data: template, error: templateError } = await supabase
         .from("mentor_templates")
         .select("system_prompt_base")
-        .eq("id", templateId)
+        .eq("template_id", templateId)
         .single();
         
       if (templateError) {
@@ -77,6 +78,7 @@ serve(async (req) => {
         color,
         system_prompt: systemPrompt,
         user_id: userId,
+        icon
       })
       .select()
       .single();

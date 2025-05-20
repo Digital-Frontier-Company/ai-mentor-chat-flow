@@ -37,14 +37,14 @@ serve(async (req) => {
     // Extract request data
     const { 
       mentorId, 
-      message, 
+      messages, 
       chatSessionId, 
       userId,
       stream = true 
     } = await req.json();
     
-    if (!mentorId || !message) {
-      throw new Error("Mentor ID and message are required");
+    if (!mentorId || !messages || !Array.isArray(messages)) {
+      throw new Error("Mentor ID and messages array are required");
     }
     
     // Get mentor information
@@ -83,17 +83,32 @@ serve(async (req) => {
       sessionId = session.id;
     }
     
-    // Get recent message history
-    const { data: messageHistory, error: historyError } = await supabase
-      .from("chat_messages")
-      .select("role, content")
-      .eq("chat_session_id", sessionId)
-      .order("created_at", { ascending: false })
-      .limit(MAX_MESSAGE_HISTORY);
-    
-    if (historyError) {
-      throw new Error(`Error fetching message history: ${historyError.message}`);
+    // Get recent message history if not provided in the request
+    let conversationHistory = messages;
+    if (messages.length <= 1) {
+      const { data: messageHistory, error: historyError } = await supabase
+        .from("chat_messages")
+        .select("role, content")
+        .eq("chat_session_id", sessionId)
+        .order("created_at", { ascending: false })
+        .limit(MAX_MESSAGE_HISTORY);
+      
+      if (historyError) {
+        throw new Error(`Error fetching message history: ${historyError.message}`);
+      }
+      
+      // Add message history in correct order (oldest first)
+      conversationHistory = [
+        ...messageHistory.reverse().map(msg => ({
+          role: msg.role,
+          content: msg.content
+        })),
+        ...messages  // Add current message(s)
+      ];
     }
+    
+    // Extract the user's latest message
+    const userMessage = messages[messages.length - 1]?.content || "";
     
     // Save the user message
     const { error: userMsgError } = await supabase
@@ -102,11 +117,12 @@ serve(async (req) => {
         chat_session_id: sessionId,
         user_id: userId,
         role: "user",
-        content: message,
+        content: userMessage,
       });
     
     if (userMsgError) {
-      throw new Error(`Error saving user message: ${userMsgError.message}`);
+      console.error(`Error saving user message: ${userMsgError.message}`);
+      // Continue anyway to try to get a response
     }
     
     // Build system prompt
@@ -116,13 +132,7 @@ serve(async (req) => {
     // Build the conversation history
     const conversations = [
       { role: "system", content: systemPrompt },
-      // Add message history in correct order (oldest first)
-      ...messageHistory.reverse().map(msg => ({
-        role: msg.role,
-        content: msg.content
-      })),
-      // Add the current message
-      { role: "user", content: message }
+      ...conversationHistory
     ];
 
     // If stream is true, use streaming response
@@ -146,19 +156,6 @@ serve(async (req) => {
         const errorText = await response.text();
         throw new Error(`OpenAI API error: ${errorText}`);
       }
-
-      // Create a TransformStream to process the OpenAI stream and collect the full response
-      const transformStream = new TransformStream({
-        start(controller) {
-          controller.enqueue(JSON.stringify({ type: "start", sessionId }));
-        },
-        async transform(chunk, controller) {
-          controller.enqueue(chunk);
-        },
-        async flush(controller) {
-          controller.enqueue(JSON.stringify({ type: "end" }));
-        },
-      });
 
       // Process the response in a background task
       const fullResponse = { content: "" };
