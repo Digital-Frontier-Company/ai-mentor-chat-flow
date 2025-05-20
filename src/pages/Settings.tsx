@@ -3,6 +3,8 @@ import React from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { extendedSupabase } from '@/integrations/supabase/extended-client';
+import { Subscriber } from '@/types/supabase-extensions';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -41,14 +43,15 @@ const SettingsPage = () => {
     queryKey: ['subscription', user?.id],
     queryFn: async () => {
       if (!user?.id) return null;
-      const { data, error } = await supabase
+      // Use the extended supabase client for the subscribers table
+      const { data, error } = await extendedSupabase
         .from('subscribers')
         .select('*')
         .eq('user_id', user.id)
         .single();
 
       if (error && error.code !== 'PGRST116') throw error;
-      return data;
+      return data as Subscriber | null;
     },
     enabled: !!user?.id,
   });
@@ -139,7 +142,7 @@ const SettingsPage = () => {
       
       // Redirect to Stripe Checkout
       window.location.href = data.url;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating checkout session:', error);
       toast({
         variant: "destructive",
@@ -165,7 +168,7 @@ const SettingsPage = () => {
       
       // Redirect to Stripe Customer Portal
       window.location.href = data.url;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error accessing subscription portal:', error);
       toast({
         variant: "destructive",
@@ -386,7 +389,9 @@ const SettingsPage = () => {
                           </h3>
                           <p className="text-sm text-zinc-400">
                             Current subscription active until{' '}
-                            {new Date(subscription.subscription_end).toLocaleDateString()}
+                            {subscription.subscription_end 
+                              ? new Date(subscription.subscription_end).toLocaleDateString() 
+                              : 'N/A'}
                           </p>
                         </div>
                         <div className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-lime-600 text-white hover:bg-lime-700 h-10 px-4 py-2">
