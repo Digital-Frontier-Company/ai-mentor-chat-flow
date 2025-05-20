@@ -1,10 +1,10 @@
-
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import Logo from '@/components/ui/logo';
 
 // Type for mentor templates from our database
 interface MentorTemplate {
@@ -57,16 +57,38 @@ const Home: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-zinc-950 text-white">
+      {/* Navigation */}
+      <header className="py-4 px-6">
+        <div className="max-w-6xl mx-auto flex justify-between items-center">
+          <Logo size="lg" />
+          <div className="space-x-2">
+            <Link to="/app">
+              <Button variant="ghost" className="text-zinc-400 hover:text-white">
+                Login
+              </Button>
+            </Link>
+            <Link to="/app">
+              <Button className="bg-lime-500 hover:bg-lime-600 text-zinc-900">
+                Get Started
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </header>
+      
       {/* Hero Section */}
       <section className="relative py-20 px-4 overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-zinc-900 to-black z-0"></div>
         <div className="absolute inset-0 opacity-20">
-          <div className="absolute right-0 bottom-0 w-2/3 h-2/3 bg-mentor-blue rounded-full filter blur-3xl"></div>
+          <div className="absolute right-0 bottom-0 w-2/3 h-2/3 bg-lime-500 rounded-full filter blur-3xl"></div>
           <div className="absolute left-0 top-0 w-1/2 h-1/2 bg-mentor-purple rounded-full filter blur-3xl"></div>
         </div>
         
         <div className="max-w-6xl mx-auto relative z-10">
           <div className="text-center mb-10">
+            <div className="flex justify-center mb-6">
+              <Logo size="xl" withText={false} />
+            </div>
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 bg-clip-text text-transparent bg-gradient-to-r from-white to-zinc-400">
               Unlock Your Potential. Design Your Own AI Mentor.
             </h1>
@@ -74,8 +96,8 @@ const Home: React.FC = () => {
               Stop generic learning. With MakeMentors.io, you craft personalized AI mentors for any subject, skill, or goal. Tailored guidance, 24/7.
             </p>
             <div className="mt-10">
-              <Link to="/mentor-selection">
-                <Button size="lg" className="bg-gradient-to-r from-mentor-blue to-mentor-purple hover:from-mentor-blue/90 hover:to-mentor-purple/90 text-white px-8 py-6 text-lg rounded-full">
+              <Link to="/app">
+                <Button size="lg" className="bg-gradient-to-r from-lime-500 to-lime-400 hover:from-lime-600 hover:to-lime-500 text-zinc-900 px-8 py-6 text-lg rounded-full">
                   Create Your First Mentor Free
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
@@ -229,7 +251,7 @@ const Home: React.FC = () => {
           </div>
           
           <div className="text-center mt-10">
-            <Link to="/mentor-selection">
+            <Link to="/app">
               <Button size="lg" variant="outline" className="border-zinc-700 hover:bg-zinc-800">
                 Explore All Templates
                 <ArrowRight className="ml-2 h-4 w-4" />
@@ -248,14 +270,36 @@ const Home: React.FC = () => {
           <p className="text-xl text-zinc-400 mb-10">
             Your personalized AI mentor is just a few clicks away. Start building your knowledge and confidence today.
           </p>
-          <Link to="/mentor-selection">
-            <Button size="lg" className="bg-gradient-to-r from-mentor-blue to-mentor-purple hover:from-mentor-blue/90 hover:to-mentor-purple/90 text-white px-8 py-6 text-lg">
+          <Link to="/app">
+            <Button size="lg" className="bg-gradient-to-r from-lime-500 to-lime-400 hover:from-lime-600 hover:to-lime-500 text-zinc-900 px-8 py-6 text-lg">
               Sign Up & Create Your Mentor
               <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
           </Link>
         </div>
       </section>
+      
+      {/* Footer */}
+      <footer className="bg-zinc-900 py-12 text-zinc-400">
+        <div className="max-w-6xl mx-auto px-4">
+          <div className="flex flex-col md:flex-row justify-between items-center mb-8">
+            <Logo size="md" />
+            <div className="mt-4 md:mt-0 flex space-x-6">
+              <Link to="#" className="hover:text-lime-400">About</Link>
+              <Link to="#" className="hover:text-lime-400">Templates</Link>
+              <Link to="#" className="hover:text-lime-400">Pricing</Link>
+              <Link to="#" className="hover:text-lime-400">Contact</Link>
+            </div>
+          </div>
+          <div className="border-t border-zinc-800 pt-8 flex flex-col md:flex-row justify-between items-center">
+            <p>© {new Date().getFullYear()} MakeMentors.io. All rights reserved.</p>
+            <div className="mt-4 md:mt-0 flex space-x-6">
+              <Link to="#" className="hover:text-lime-400">Privacy</Link>
+              <Link to="#" className="hover:text-lime-400">Terms</Link>
+            </div>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 };

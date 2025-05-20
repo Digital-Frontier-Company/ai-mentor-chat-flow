@@ -95,7 +95,7 @@ const CustomizationForm: React.FC = () => {
 
   // Get gradient color based on category
   const getGradient = (category?: string) => {
-    if (!category) return 'from-mentor-blue to-purple-600';
+    if (!category) return 'from-lime-500 to-lime-400';
     
     switch (category.toLowerCase()) {
       case 'technology': return 'from-violet-500 to-purple-700';
@@ -103,7 +103,7 @@ const CustomizationForm: React.FC = () => {
       case 'creative': return 'from-pink-500 to-rose-700';
       case 'language': return 'from-blue-500 to-indigo-700';
       case 'education': return 'from-amber-500 to-orange-700';
-      default: return 'from-mentor-blue to-purple-600';
+      default: return 'from-lime-500 to-lime-400';
     }
   };
 
@@ -191,7 +191,7 @@ const CustomizationForm: React.FC = () => {
             
             <Button 
               type="submit" 
-              className={`w-full mt-6 bg-gradient-to-r ${getGradient(selectedMentor.category)} hover:opacity-90 text-white`}
+              className={`w-full mt-6 bg-gradient-to-r ${getGradient(selectedMentor.category)} hover:opacity-90 text-zinc-900`}
             >
               Start Chatting
             </Button>
