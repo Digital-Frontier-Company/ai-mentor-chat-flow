@@ -18,6 +18,7 @@ export interface UserPreferences {
   name: string;
   goal: string;
   experience: 'Beginner' | 'Intermediate' | 'Advanced';
+  mentorName?: string;
 }
 
 export interface Message {
@@ -49,7 +50,8 @@ export const MentorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [userPreferences, setUserPreferences] = useState<UserPreferences>({
     name: '',
     goal: '',
-    experience: 'Beginner'
+    experience: 'Beginner',
+    mentorName: ''
   });
   const [messages, setMessages] = useState<Message[]>([]);
   const [isTyping, setIsTyping] = useState(false);
@@ -70,10 +72,12 @@ export const MentorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setUserPreferences({
       name: '',
       goal: '',
-      experience: 'Beginner'
+      experience: 'Beginner',
+      mentorName: ''
     });
   };
 
+  // Fallback mentor templates (used while loading from database)
   const mentors: MentorType[] = [
     {
       id: 'business-strategy',

@@ -192,5 +192,6 @@ export const getMentorResponse = async (
 
 // Function to get a welcome message from the mentor
 export const getWelcomeMessage = (mentor: MentorType, userPreferences: UserPreferences): string => {
-  return `Hello ${userPreferences.name}! I'm your ${mentor.name}. I'm here to help you achieve your goal: "${userPreferences.goal}". Based on your ${userPreferences.experience} experience level, I'll tailor my guidance accordingly. What specific assistance do you need today?`;
+  const mentorName = mentor.name.replace('Template', '').trim();
+  return `Hello ${userPreferences.name}! I'm your ${mentorName} mentor. I'm here to help you achieve your goal: "${userPreferences.goal}". Based on your ${userPreferences.experience} experience level, I'll tailor my guidance accordingly. What specific assistance do you need today?`;
 };

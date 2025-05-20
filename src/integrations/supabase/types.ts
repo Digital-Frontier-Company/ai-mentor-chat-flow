@@ -106,6 +106,45 @@ export type Database = {
           },
         ]
       }
+      mentor_templates: {
+        Row: {
+          category: string
+          created_at: string
+          default_mentor_name: string
+          description_for_user: string
+          display_name: string
+          icon: string
+          id: string
+          system_prompt_base: string
+          template_id: string
+          updated_at: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          default_mentor_name: string
+          description_for_user: string
+          display_name: string
+          icon: string
+          id?: string
+          system_prompt_base: string
+          template_id: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          default_mentor_name?: string
+          description_for_user?: string
+          display_name?: string
+          icon?: string
+          id?: string
+          system_prompt_base?: string
+          template_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       mentors: {
         Row: {
           avatar_url: string | null
