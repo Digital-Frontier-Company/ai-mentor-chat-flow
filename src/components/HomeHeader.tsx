@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import Logo from '@/components/ui/logo';
 import { useAuth } from '@/contexts/AuthContext';
-import { LogOut } from 'lucide-react';
+import { LogOut, Settings } from 'lucide-react';
 
 const HomeHeader: React.FC = () => {
   const { user, signOut } = useAuth();
@@ -19,6 +19,12 @@ const HomeHeader: React.FC = () => {
               <Link to="/app">
                 <Button variant="ghost" className="text-zinc-400 hover:text-white">
                   My Mentors
+                </Button>
+              </Link>
+              <Link to="/settings">
+                <Button variant="ghost" className="text-zinc-400 hover:text-white">
+                  <Settings className="h-4 w-4 mr-2" />
+                  Settings
                 </Button>
               </Link>
               <Button 
