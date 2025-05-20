@@ -9,7 +9,7 @@ interface ProtectedRouteProps {
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   // Check if authentication is disabled via environment variable
-  const isAuthDisabled = true; // Set to true to disable auth checks
+  const isAuthDisabled = false; // Set to false to enable auth checks
   const { user, loading } = useAuth();
   const location = useLocation();
 
