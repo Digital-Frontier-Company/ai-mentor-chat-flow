@@ -384,7 +384,7 @@ const SettingsPage = () => {
                       <div className="flex justify-between items-center">
                         <div>
                           <h3 className="font-semibold text-lime-500">
-                            {subscription.subscription_tier || 'Premium'}
+                            {subscription.subscription_tier || 'Infinite'}
                           </h3>
                           <p className="text-sm text-zinc-400">
                             Current subscription active until{' '}
@@ -413,11 +413,14 @@ const SettingsPage = () => {
                     <div className="p-4 bg-zinc-800 rounded-lg border border-zinc-700">
                       <p className="mb-4">You don't have an active subscription. Subscribe to unlock premium features!</p>
                       
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <Card className="bg-zinc-800 border-zinc-700">
+                      <div className="grid grid-cols-1 gap-6">
+                        <Card className="bg-zinc-800 border-zinc-700 border-lime-500">
                           <CardHeader>
-                            <CardTitle>Monthly</CardTitle>
-                            <div className="text-3xl font-bold">$9.99<span className="text-sm text-zinc-400">/month</span></div>
+                            <div className="flex justify-between items-center">
+                              <CardTitle>Infinite</CardTitle>
+                              <span className="bg-lime-600 text-white text-xs px-2 py-1 rounded-full">Best Value</span>
+                            </div>
+                            <div className="text-3xl font-bold">$99.99<span className="text-sm text-zinc-400">/month</span></div>
                           </CardHeader>
                           <CardContent>
                             <ul className="space-y-2 mb-4">
@@ -439,54 +442,20 @@ const SettingsPage = () => {
                                 </svg>
                                 Priority support
                               </li>
-                            </ul>
-                          </CardContent>
-                          <CardFooter>
-                            <Button 
-                              onClick={() => createCheckoutSession('price_monthly')}
-                              className="w-full bg-lime-600 hover:bg-lime-700"
-                            >
-                              Subscribe Monthly
-                            </Button>
-                          </CardFooter>
-                        </Card>
-                        
-                        <Card className="bg-zinc-800 border-zinc-700 border-lime-500">
-                          <CardHeader>
-                            <div className="flex justify-between items-center">
-                              <CardTitle>Annual</CardTitle>
-                              <span className="bg-lime-600 text-white text-xs px-2 py-1 rounded-full">Save 20%</span>
-                            </div>
-                            <div className="text-3xl font-bold">$95.88<span className="text-sm text-zinc-400">/year</span></div>
-                          </CardHeader>
-                          <CardContent>
-                            <ul className="space-y-2 mb-4">
                               <li className="flex items-center">
                                 <svg className="w-5 h-5 text-lime-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
                                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                                 </svg>
-                                Everything in Monthly
-                              </li>
-                              <li className="flex items-center">
-                                <svg className="w-5 h-5 text-lime-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                                </svg>
-                                Exclusive annual features
-                              </li>
-                              <li className="flex items-center">
-                                <svg className="w-5 h-5 text-lime-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                                </svg>
-                                20% savings vs monthly
+                                Exclusive Infinite features
                               </li>
                             </ul>
                           </CardContent>
                           <CardFooter>
                             <Button 
-                              onClick={() => createCheckoutSession('price_annual')}
+                              onClick={() => createCheckoutSession('price_1RDBwHLdC3hp2fnCnUVGgTQO')}
                               className="w-full bg-lime-600 hover:bg-lime-700"
                             >
-                              Subscribe Annually
+                              Subscribe Now
                             </Button>
                           </CardFooter>
                         </Card>
