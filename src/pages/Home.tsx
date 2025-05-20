@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, CheckCircle } from 'lucide-react';
@@ -76,13 +77,18 @@ const Home: React.FC = () => {
         </div>
       </header>
       
-      {/* Hero Section */}
-      <section className="relative py-20 px-4 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-zinc-900 to-black z-0"></div>
-        <div className="absolute inset-0 opacity-20">
-          <div className="absolute right-0 bottom-0 w-2/3 h-2/3 bg-lime-500 rounded-full filter blur-3xl"></div>
-          <div className="absolute left-0 top-0 w-1/2 h-1/2 bg-mentor-purple rounded-full filter blur-3xl"></div>
-        </div>
+      {/* Hero Section with new background image */}
+      <section 
+        className="relative py-20 px-4 overflow-hidden"
+        style={{
+          backgroundImage: `url('/lovable-uploads/75b303a0-d06c-44da-9531-3cfb842f4ba4.png')`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat',
+          minHeight: '80vh',
+        }}
+      >
+        <div className="absolute inset-0 bg-black bg-opacity-50 z-0"></div>
         
         <div className="max-w-6xl mx-auto relative z-10">
           <div className="text-center mb-10">
@@ -92,7 +98,7 @@ const Home: React.FC = () => {
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 bg-clip-text text-transparent bg-gradient-to-r from-white to-zinc-400">
               Unlock Your Potential. Design Your Own AI Mentor.
             </h1>
-            <p className="text-xl max-w-3xl mx-auto text-zinc-400">
+            <p className="text-xl max-w-3xl mx-auto text-zinc-200">
               Stop generic learning. With MakeMentors.io, you craft personalized AI mentors for any subject, skill, or goal. Tailored guidance, 24/7.
             </p>
             <div className="mt-10">
