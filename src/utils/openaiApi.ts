@@ -78,12 +78,19 @@ export const getMentorResponse = async (
       content: userMessage
     });
 
+    // Get the Supabase project URL for functions
+    const functionUrl = "https://bapditcjlxctrisoixpg.supabase.co/functions/v1/chat-completion";
+    
+    // Get current session token
+    const { data: sessionData } = await supabase.auth.getSession();
+    const accessToken = sessionData?.session?.access_token || '';
+
     // Call our edge function with streaming enabled
-    const response = await fetch(`${supabase.functions.url}/chat-completion`, {
+    const response = await fetch(functionUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${supabase.auth.session()?.access_token || ''}`
+        'Authorization': `Bearer ${accessToken}`
       },
       body: JSON.stringify({
         messages: apiMessages,
