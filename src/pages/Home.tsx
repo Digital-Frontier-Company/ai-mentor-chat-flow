@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, CheckCircle } from 'lucide-react';
@@ -6,6 +5,8 @@ import { Button } from '@/components/ui/button';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import Logo from '@/components/ui/logo';
+import HomeHeader from '@/components/HomeHeader';
+import { useAuth } from '@/contexts/AuthContext';
 
 // Type for mentor templates from our database
 interface MentorTemplate {
@@ -18,6 +19,8 @@ interface MentorTemplate {
 }
 
 const Home: React.FC = () => {
+  const { user } = useAuth();
+  
   // Fetch mentor templates from the database
   const { data: mentorTemplates, isLoading } = useQuery({
     queryKey: ['mentorTemplates'],
@@ -59,23 +62,7 @@ const Home: React.FC = () => {
   return (
     <div className="min-h-screen bg-zinc-950 text-white">
       {/* Navigation */}
-      <header className="py-4 px-6">
-        <div className="max-w-6xl mx-auto flex justify-between items-center">
-          <Logo size="lg" />
-          <div className="space-x-2">
-            <Link to="/app">
-              <Button variant="ghost" className="text-zinc-400 hover:text-white">
-                Login
-              </Button>
-            </Link>
-            <Link to="/app">
-              <Button className="bg-lime-500 hover:bg-lime-600 text-zinc-900">
-                Get Started
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </header>
+      <HomeHeader />
       
       {/* Hero Section with new background image */}
       <section 
@@ -102,9 +89,9 @@ const Home: React.FC = () => {
               Stop generic learning. With MakeMentors.io, you craft personalized AI mentors for any subject, skill, or goal. Tailored guidance, 24/7.
             </p>
             <div className="mt-10">
-              <Link to="/app">
+              <Link to={user ? "/app" : "/auth"}>
                 <Button size="lg" className="bg-gradient-to-r from-lime-500 to-lime-400 hover:from-lime-600 hover:to-lime-500 text-zinc-900 px-8 py-6 text-lg rounded-full">
-                  Create Your First Mentor Free
+                  {user ? 'Go to My Mentors' : 'Create Your First Mentor Free'}
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
               </Link>
@@ -257,7 +244,7 @@ const Home: React.FC = () => {
           </div>
           
           <div className="text-center mt-10">
-            <Link to="/app">
+            <Link to={user ? "/app" : "/auth"}>
               <Button size="lg" variant="outline" className="border-zinc-700 hover:bg-zinc-800">
                 Explore All Templates
                 <ArrowRight className="ml-2 h-4 w-4" />
@@ -276,9 +263,9 @@ const Home: React.FC = () => {
           <p className="text-xl text-zinc-400 mb-10">
             Your personalized AI mentor is just a few clicks away. Start building your knowledge and confidence today.
           </p>
-          <Link to="/app">
+          <Link to={user ? "/app" : "/auth"}>
             <Button size="lg" className="bg-gradient-to-r from-lime-500 to-lime-400 hover:from-lime-600 hover:to-lime-500 text-zinc-900 px-8 py-6 text-lg">
-              Sign Up & Create Your Mentor
+              {user ? 'Go to My Mentors' : 'Sign Up & Create Your Mentor'}
               <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
           </Link>

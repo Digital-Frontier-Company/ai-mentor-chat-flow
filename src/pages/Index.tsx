@@ -5,9 +5,12 @@ import { MentorProvider } from '@/contexts/MentorContext';
 import MentorApp from '@/components/MentorApp';
 import Logo from '@/components/ui/logo';
 import { Button } from '@/components/ui/button';
-import { HomeIcon, MessageCircle, Settings, UserCircle } from 'lucide-react';
+import { HomeIcon, MessageCircle, Settings, LogOut } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 
 const Index = () => {
+  const { user, signOut } = useAuth();
+  
   return (
     <div className="min-h-screen bg-zinc-950 text-white">
       <header 
@@ -49,10 +52,23 @@ const Index = () => {
             </nav>
             
             <div>
-              <Button variant="outline" size="sm" className="flex items-center gap-2">
-                <UserCircle size={18} />
-                <span>Sign in</span>
-              </Button>
+              {user ? (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="flex items-center gap-2"
+                  onClick={() => signOut()}
+                >
+                  <LogOut size={18} />
+                  <span>Sign out</span>
+                </Button>
+              ) : (
+                <Button variant="outline" size="sm" asChild className="flex items-center gap-2">
+                  <Link to="/auth">
+                    Sign in
+                  </Link>
+                </Button>
+              )}
             </div>
           </div>
         </div>
