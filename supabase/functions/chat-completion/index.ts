@@ -83,6 +83,11 @@ serve(async (req) => {
         }),
       });
 
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Error from OpenAI API: ${errorText}`);
+      }
+
       // Return the streaming response directly
       return new Response(response.body, {
         headers: { 
