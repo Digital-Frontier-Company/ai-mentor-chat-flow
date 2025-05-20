@@ -9,6 +9,7 @@ import Home from "./pages/Home";
 import NotFound from "./pages/NotFound";
 import Auth from "./pages/Auth";
 import EmailVerification from "./pages/EmailVerification";
+import ResetPassword from "./pages/ResetPassword";
 import Settings from "./pages/Settings";
 import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -27,6 +28,7 @@ const App = () => (
             <Route path="/" element={<Home />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/auth/verification" element={<EmailVerification />} />
+            <Route path="/auth/reset-password" element={<ResetPassword />} />
             <Route path="/app" element={
               <ProtectedRoute>
                 <Index />
