@@ -20,7 +20,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 const queryClient = new QueryClient();
 
 const App = () => {
-  // Add console log on initial render
+  // Add console log on initial render for debugging
   console.log("App rendering - initializing routes");
   
   return (
