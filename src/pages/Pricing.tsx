@@ -118,11 +118,16 @@ const Pricing: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-black bg-opacity-90 bg-[url('/lovable-uploads/6f58afdf-7a45-4bd1-b5e8-53d7f1ce9cc7.png')] bg-cover bg-center bg-no-repeat bg-blend-soft-light">
-      <div className="container max-w-6xl mx-auto py-16 px-4">
+    <div className="min-h-screen bg-gradient-to-b from-zinc-900 to-black bg-[url('/lovable-uploads/6f58afdf-7a45-4bd1-b5e8-53d7f1ce9cc7.png')] bg-cover bg-center bg-no-repeat bg-blend-overlay relative overflow-hidden">
+      {/* Star field effect */}
+      <div className="absolute inset-0 opacity-70">
+        <div className="stars absolute inset-0"></div>
+      </div>
+      
+      <div className="container max-w-6xl mx-auto py-16 px-4 relative z-10">
         <div className="text-center mb-16">
           <h1 className="text-4xl md:text-5xl font-bold mb-4 text-white">
-            Choose Your <span className="text-fuchsia-400">Learning Path</span>
+            Choose Your <span className="text-lime-400">Learning Path</span>
           </h1>
           <p className="text-xl max-w-2xl mx-auto text-zinc-300">
             Select the plan that matches your learning goals and unlock the power of personalized AI mentorship.
@@ -131,10 +136,10 @@ const Pricing: React.FC = () => {
         
         <div className="grid md:grid-cols-3 gap-8">
           {pricingPlans.map(plan => (
-            <Card key={plan.id} className={`bg-zinc-900/70 backdrop-blur-sm border-zinc-800 relative overflow-hidden ${plan.popular ? 'ring-2 ring-fuchsia-500 shadow-lg shadow-fuchsia-500/20' : ''}`}>
+            <Card key={plan.id} className={`backdrop-blur-lg bg-zinc-900/40 border-zinc-700 relative overflow-hidden transition-all duration-300 hover:shadow-xl hover:shadow-lime-500/10 ${plan.popular ? 'ring-2 ring-lime-500 shadow-lg shadow-lime-500/20' : ''}`}>
               {plan.popular && (
                 <div className="absolute top-0 right-0">
-                  <div className="bg-fuchsia-500 text-zinc-900 text-xs font-bold px-3 py-1">
+                  <div className="bg-lime-500 text-zinc-900 text-xs font-bold px-3 py-1">
                     MOST POPULAR
                   </div>
                 </div>
@@ -154,7 +159,7 @@ const Pricing: React.FC = () => {
                 <ul className="space-y-3">
                   {plan.features.map((feature, index) => (
                     <li key={index} className="flex items-start">
-                      <Check className="h-5 w-5 text-cyan-400 mr-2 flex-shrink-0 mt-0.5" />
+                      <Check className="h-5 w-5 text-lime-400 mr-2 flex-shrink-0 mt-0.5" />
                       <span className="text-slate-50">{feature}</span>
                     </li>
                   ))}
@@ -164,7 +169,7 @@ const Pricing: React.FC = () => {
               <CardFooter>
                 <Button 
                   className={`w-full ${plan.popular 
-                    ? 'bg-gradient-to-r from-fuchsia-600 to-cyan-400 text-zinc-900 hover:from-fuchsia-700 hover:to-cyan-500' 
+                    ? 'bg-gradient-to-r from-lime-600 to-cyan-400 text-zinc-900 hover:from-lime-700 hover:to-cyan-500' 
                     : 'bg-zinc-800 hover:bg-zinc-700'}`} 
                   onClick={() => handleSubscribe(plan)} 
                   disabled={loading === plan.id}
@@ -177,8 +182,8 @@ const Pricing: React.FC = () => {
         </div>
         
         <div className="mt-16 max-w-2xl mx-auto">
-          <div className="flex items-start p-4 rounded-lg bg-zinc-800/70 backdrop-blur-sm">
-            <AlertCircle className="h-5 w-5 text-cyan-400 mr-3 flex-shrink-0 mt-0.5" />
+          <div className="flex items-start p-4 rounded-lg bg-zinc-900/40 backdrop-blur-sm border border-zinc-700/50">
+            <AlertCircle className="h-5 w-5 text-lime-400 mr-3 flex-shrink-0 mt-0.5" />
             <div>
               <h3 className="font-medium mb-2 text-white">100% Satisfaction Guarantee</h3>
               <p className="text-zinc-300">
@@ -188,6 +193,32 @@ const Pricing: React.FC = () => {
           </div>
         </div>
       </div>
+
+      <style jsx>{`
+        @keyframes twinkle {
+          0% { opacity: 0.2; }
+          50% { opacity: 0.8; }
+          100% { opacity: 0.2; }
+        }
+        
+        .stars {
+          background-image: radial-gradient(2px 2px at 20px 30px, #eee, rgba(0,0,0,0)), 
+                            radial-gradient(2px 2px at 40px 70px, #fff, rgba(0,0,0,0)), 
+                            radial-gradient(1px 1px at 90px 40px, #fff, rgba(0,0,0,0)),
+                            radial-gradient(2px 2px at 160px 120px, #ddd, rgba(0,0,0,0)),
+                            radial-gradient(1px 1px at 200px 60px, #fff, rgba(0,0,0,0)),
+                            radial-gradient(2px 2px at 260px 170px, #fff, rgba(0,0,0,0)),
+                            radial-gradient(3px 3px at 300px 30px, #fff, rgba(0,0,0,0)),
+                            radial-gradient(1px 1px at 340px 80px, #fff, rgba(0,0,0,0)),
+                            radial-gradient(2px 2px at 380px 130px, #fff, rgba(0,0,0,0)),
+                            radial-gradient(1px 1px at 420px 40px, #fff, rgba(0,0,0,0)),
+                            radial-gradient(2px 2px at 480px 100px, #fff, rgba(0,0,0,0)),
+                            radial-gradient(1px 1px at 520px 60px, #fff, rgba(0,0,0,0));
+          background-repeat: repeat;
+          background-size: 600px 300px;
+          animation: twinkle 10s ease-in-out infinite alternate;
+        }
+      `}</style>
     </div>
   );
 };
