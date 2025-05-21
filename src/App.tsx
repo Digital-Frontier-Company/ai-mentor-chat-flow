@@ -11,6 +11,9 @@ import Auth from "./pages/Auth";
 import EmailVerification from "./pages/EmailVerification";
 import ResetPassword from "./pages/ResetPassword";
 import Settings from "./pages/Settings";
+import UserProfile from "./pages/UserProfile";
+import Pricing from "./pages/Pricing";
+import LegalPages from "./pages/LegalPages";
 import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 
@@ -36,9 +39,11 @@ const App = () => (
             } />
             <Route path="/settings" element={
               <ProtectedRoute>
-                <Settings />
+                <UserProfile />
               </ProtectedRoute>
             } />
+            <Route path="/pricing" element={<Pricing />} />
+            <Route path="/legal/:page" element={<LegalPages />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
