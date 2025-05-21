@@ -19,7 +19,6 @@ import ProtectedRoute from "./components/ProtectedRoute";
 
 const queryClient = new QueryClient();
 
-// Note: Authentication protection is now enabled in the ProtectedRoute component
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
