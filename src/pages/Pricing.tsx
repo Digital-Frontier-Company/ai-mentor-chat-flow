@@ -194,7 +194,8 @@ const Pricing: React.FC = () => {
         </div>
       </div>
 
-      <style jsx>{`
+      <style>
+        {`
         @keyframes twinkle {
           0% { opacity: 0.2; }
           50% { opacity: 0.8; }
@@ -218,7 +219,8 @@ const Pricing: React.FC = () => {
           background-size: 600px 300px;
           animation: twinkle 10s ease-in-out infinite alternate;
         }
-      `}</style>
+        `}
+      </style>
     </div>
   );
 };
