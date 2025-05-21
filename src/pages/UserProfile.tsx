@@ -1,316 +1,127 @@
 
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { toast } from 'sonner';
-import { useQuery } from '@tanstack/react-query';
-import { AlertCircle, CreditCard, Check, X } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
+import { CreditCard, Home, Settings as SettingsIcon, User } from 'lucide-react';
 
 const UserProfile: React.FC = () => {
-  const { user, signOut } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
-  
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [userInitials, setUserInitials] = useState('');
   
   useEffect(() => {
-    if (user) {
-      setEmail(user.email || '');
+    if (user?.email) {
+      // Generate initials from email
+      const emailParts = user.email.split('@')[0].split(/[._-]/);
+      const initials = emailParts
+        .slice(0, 2)
+        .map(part => part.charAt(0).toUpperCase())
+        .join('');
+      
+      setUserInitials(initials);
     }
   }, [user]);
-
-  // Fetch subscription information
-  const { data: subscription, isLoading: subscriptionLoading, refetch: refetchSubscription } = useQuery({
-    queryKey: ['subscription', user?.id],
-    queryFn: async () => {
-      if (!user) return null;
-      
-      try {
-        const { data, error } = await supabase
-          .from('subscribers')
-          .select('*')
-          .eq('user_id', user.id)
-          .single();
-          
-        if (error) throw error;
-        return data;
-      } catch (error) {
-        console.error('Error fetching subscription:', error);
-        return null;
-      }
-    },
-    enabled: !!user,
-  });
-
-  const handleUpdateEmail = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email.trim()) return;
-    
-    try {
-      setLoading(true);
-      const { error } = await supabase.auth.updateUser({ email });
-      
-      if (error) throw error;
-      
-      toast.success('Email update initiated. Please check your new email for a confirmation link.');
-    } catch (error) {
-      console.error('Error updating email:', error);
-      toast.error('Failed to update email. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
   
-  const handleUpdatePassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!password || !newPassword) return;
-    
-    try {
-      setLoading(true);
-      const { error } = await supabase.auth.updateUser({ password: newPassword });
-      
-      if (error) throw error;
-      
-      toast.success('Password updated successfully.');
-      setPassword('');
-      setNewPassword('');
-    } catch (error) {
-      console.error('Error updating password:', error);
-      toast.error('Failed to update password. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleManageSubscription = async () => {
-    try {
-      setLoading(true);
-      
-      const { data, error } = await supabase.functions.invoke('manage-subscription', {
-        body: { 
-          action: 'portal',
-          returnUrl: window.location.origin + '/settings'
-        }
-      });
-      
-      if (error) throw error;
-      
-      // Redirect to Stripe Customer Portal
-      if (data?.url) {
-        window.location.href = data.url;
-      }
-    } catch (error) {
-      console.error('Error managing subscription:', error);
-      toast.error('Failed to open subscription management. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleLogout = async () => {
-    try {
-      await signOut();
-      navigate('/');
-    } catch (error) {
-      console.error('Error signing out:', error);
-      toast.error('Failed to sign out. Please try again.');
-    }
-  };
-
-  if (!user) {
-    return (
-      <div className="flex justify-center items-center min-h-[70vh]">
-        <Alert className="max-w-md">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Authentication required</AlertTitle>
-          <AlertDescription>
-            Please log in to access your account settings.
-            <Button 
-              variant="link" 
-              className="pl-0" 
-              onClick={() => navigate('/auth')}
-            >
-              Go to login
-            </Button>
-          </AlertDescription>
-        </Alert>
-      </div>
-    );
-  }
-
   return (
-    <div className="container max-w-4xl mx-auto py-12 px-4">
-      <h1 className="text-3xl font-bold mb-8">Account Settings</h1>
+    <div className="container py-10 max-w-5xl">
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold">Your Profile</h1>
+        <p className="text-zinc-400">View and manage your personal profile</p>
+      </div>
       
-      <Tabs defaultValue="profile" className="w-full">
-        <TabsList className="grid grid-cols-2 mb-8">
-          <TabsTrigger value="profile">Profile</TabsTrigger>
-          <TabsTrigger value="subscription">Subscription</TabsTrigger>
-        </TabsList>
+      <div className="grid gap-8 md:grid-cols-4">
+        <Card className="md:col-span-1 bg-zinc-900 border-zinc-800">
+          <CardContent className="p-4">
+            <nav className="space-y-2">
+              <Button variant="ghost" className="w-full justify-start" onClick={() => navigate('/app')}>
+                <Home className="mr-2 h-4 w-4" />
+                Dashboard
+              </Button>
+              <Button variant="ghost" className="w-full justify-start" onClick={() => navigate('/settings')}>
+                <SettingsIcon className="mr-2 h-4 w-4" />
+                Settings
+              </Button>
+              <Button variant="ghost" className="w-full justify-start text-lime-500" onClick={() => navigate('/user-profile')}>
+                <User className="mr-2 h-4 w-4" />
+                Profile
+              </Button>
+              <Button variant="ghost" className="w-full justify-start" onClick={() => navigate('/pricing')}>
+                <CreditCard className="mr-2 h-4 w-4" />
+                Subscription
+              </Button>
+            </nav>
+          </CardContent>
+        </Card>
         
-        <TabsContent value="profile">
-          <div className="grid gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Email Address</CardTitle>
-                <CardDescription>
-                  Update your email address. You'll need to verify the new email.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handleUpdateEmail} className="space-y-4">
-                  <Input
-                    type="email"
-                    placeholder="Email address"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                  />
-                  <Button type="submit" disabled={loading || !email}>
-                    {loading ? 'Updating...' : 'Update Email'}
-                  </Button>
-                </form>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader>
-                <CardTitle>Change Password</CardTitle>
-                <CardDescription>
-                  Update your password to a new secure one.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handleUpdatePassword} className="space-y-4">
-                  <Input
-                    type="password"
-                    placeholder="New password"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    required
-                    minLength={6}
-                  />
-                  <Button 
-                    type="submit" 
-                    disabled={loading || !newPassword}
-                  >
-                    {loading ? 'Updating...' : 'Update Password'}
-                  </Button>
-                </form>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader>
-                <CardTitle>Account Actions</CardTitle>
-                <CardDescription>
-                  Manage your account sessions and data.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <Button 
-                  variant="destructive" 
-                  onClick={handleLogout}
-                >
-                  Sign Out
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-        
-        <TabsContent value="subscription">
-          <Card>
+        <div className="md:col-span-3 space-y-6">
+          <Card className="bg-zinc-900 border-zinc-800">
             <CardHeader>
-              <CardTitle>Subscription Status</CardTitle>
-              <CardDescription>
-                Manage your current subscription and billing information.
-              </CardDescription>
+              <CardTitle>User Profile</CardTitle>
+              <CardDescription>Your personal information and profile details</CardDescription>
             </CardHeader>
             <CardContent>
-              {subscriptionLoading ? (
-                <div className="flex items-center space-x-4 py-6">
-                  <div className="h-5 w-5 animate-spin rounded-full border-b-2 border-lime-500"></div>
-                  <p>Loading subscription information...</p>
-                </div>
-              ) : subscription ? (
-                <div className="space-y-6">
-                  <div className="rounded-lg border p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <h3 className="text-lg font-medium">Current Plan</h3>
-                      {subscription.subscribed ? (
-                        <div className="flex items-center text-green-500">
-                          <Check className="h-4 w-4 mr-1" />
-                          <span>Active</span>
-                        </div>
-                      ) : (
-                        <div className="flex items-center text-red-500">
-                          <X className="h-4 w-4 mr-1" />
-                          <span>Inactive</span>
-                        </div>
-                      )}
-                    </div>
-                    
-                    {subscription.subscribed && (
-                      <>
-                        <div className="grid grid-cols-2 gap-2 text-sm">
-                          <span className="text-zinc-400">Subscription Tier:</span>
-                          <span>{subscription.subscription_tier || 'Basic'}</span>
-                          
-                          <span className="text-zinc-400">Renewal Date:</span>
-                          <span>
-                            {subscription.subscription_end 
-                              ? new Date(subscription.subscription_end).toLocaleDateString() 
-                              : 'Not available'}
-                          </span>
-                        </div>
-                      </>
-                    )}
+              <div className="flex flex-col items-center text-center sm:flex-row sm:text-left sm:items-start">
+                <Avatar className="h-24 w-24 mb-4 sm:mb-0 sm:mr-6">
+                  <AvatarFallback className="text-2xl bg-lime-500 text-zinc-900">{userInitials}</AvatarFallback>
+                </Avatar>
+                
+                <div>
+                  <h3 className="text-xl font-medium">{user?.email}</h3>
+                  <p className="text-zinc-400 mt-1">Member since {new Date(user?.created_at || Date.now()).toLocaleDateString()}</p>
+                  
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <Button variant="outline" size="sm" onClick={() => navigate('/settings')}>
+                      Edit Profile
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => navigate('/pricing')}>
+                      Manage Subscription
+                    </Button>
                   </div>
-                  
-                  <Button 
-                    onClick={handleManageSubscription} 
-                    disabled={loading}
-                    className="w-full"
-                  >
-                    <CreditCard className="mr-2 h-4 w-4" />
-                    {subscription.subscribed 
-                      ? 'Manage Subscription' 
-                      : 'View Subscription Options'}
-                  </Button>
-                  
-                  <Button 
-                    variant="outline"
-                    onClick={() => refetchSubscription()}
-                    disabled={subscriptionLoading}
-                    className="w-full"
-                  >
-                    Refresh Subscription Status
-                  </Button>
                 </div>
-              ) : (
-                <div className="text-center py-6">
-                  <p className="mb-4">You don't have an active subscription yet.</p>
-                  <Button 
-                    onClick={() => navigate('/pricing')}
-                    className="bg-gradient-to-r from-lime-500 to-lime-400 text-zinc-900"
-                  >
-                    View Pricing Plans
-                  </Button>
-                </div>
-              )}
+              </div>
+              
+              <div className="mt-10 border-t border-zinc-800 pt-6">
+                <h4 className="font-medium mb-4">Account Summary</h4>
+                <dl className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <dt className="text-zinc-400 text-sm">Email</dt>
+                    <dd>{user?.email}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-zinc-400 text-sm">Account Type</dt>
+                    <dd>Standard User</dd>
+                  </div>
+                  <div>
+                    <dt className="text-zinc-400 text-sm">Mentors Created</dt>
+                    <dd>0</dd>
+                  </div>
+                  <div>
+                    <dt className="text-zinc-400 text-sm">Total Chat Messages</dt>
+                    <dd>0</dd>
+                  </div>
+                </dl>
+              </div>
             </CardContent>
           </Card>
-        </TabsContent>
-      </Tabs>
+          
+          <Card className="bg-zinc-900 border-zinc-800">
+            <CardHeader>
+              <CardTitle>Learning Stats</CardTitle>
+              <CardDescription>Track your learning progress</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-zinc-400">You'll see your learning statistics here once you start using mentors.</p>
+              
+              <Button className="mt-4" onClick={() => navigate('/app')}>
+                Start Learning
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
   );
 };
