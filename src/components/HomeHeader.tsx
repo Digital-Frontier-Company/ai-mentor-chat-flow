@@ -5,6 +5,7 @@ import { Menu, X, LogIn, User, CreditCard, Home, MessageCircle, Settings } from 
 import Logo from '@/components/ui/logo';
 import { useAuth } from '@/contexts/AuthContext';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+
 const HomeHeader: React.FC = () => {
   const {
     user,
@@ -88,8 +89,8 @@ const HomeHeader: React.FC = () => {
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu> : <div className="flex gap-3">
-                <Button variant="outline" size="sm" asChild>
-                  <Link to="/auth" className="chang the color of this button to green like the others">
+                <Button className="bg-lime-500 hover:bg-lime-600 text-zinc-900" size="sm" asChild>
+                  <Link to="/auth">
                     Sign in
                   </Link>
                 </Button>
@@ -145,7 +146,7 @@ const HomeHeader: React.FC = () => {
                       Sign out
                     </Button>
                   </div> : <div className="flex flex-col gap-3">
-                    <Button variant="outline" size="sm" asChild onClick={toggleMobileMenu}>
+                    <Button className="bg-lime-500 hover:bg-lime-600 text-zinc-900" size="sm" asChild onClick={toggleMobileMenu}>
                       <Link to="/auth">
                         Sign in
                       </Link>
@@ -162,4 +163,5 @@ const HomeHeader: React.FC = () => {
       </div>
     </header>;
 };
+
 export default HomeHeader;
