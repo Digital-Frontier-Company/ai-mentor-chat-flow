@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -28,7 +27,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
-        console.log("Auth event:", event);
+        console.log("Auth event:", event, "Session:", session ? "exists" : "null");
         setSession(session);
         setUser(session?.user ?? null);
         
@@ -37,11 +36,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             title: "Welcome back!",
             description: "You have successfully signed in.",
           });
+          
+          // Add a small delay before navigation to ensure all auth state is properly updated
+          setTimeout(() => {
+            navigate('/app');
+          }, 100);
         } else if (event === 'SIGNED_OUT') {
           toast({
             title: "Signed out",
             description: "You have successfully signed out.",
           });
+          navigate('/');
         } else if (event === 'PASSWORD_RECOVERY') {
           navigate('/auth/reset-password');
         } else if (event === 'USER_UPDATED') {
@@ -57,9 +62,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // THEN check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log("Initial session check:", session ? "logged in" : "not logged in");
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
+      
+      // If user is already logged in and on the auth page, redirect to app
+      if (session?.user && window.location.pathname === '/auth') {
+        navigate('/app');
+      }
     });
 
     return () => {

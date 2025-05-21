@@ -1,28 +1,37 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import Logo from '@/components/ui/logo';
 
 const Auth: React.FC = () => {
-  const { signIn, signUp, resetPassword } = useAuth();
+  const { signIn, signUp, resetPassword, user } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [username, setUsername] = useState('');
   const [loading, setLoading] = useState(false);
   const [showResetPassword, setShowResetPassword] = useState(false);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const defaultTab = searchParams.get('signup') === 'true' ? 'signup' : 'signin';
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (user) {
+      navigate('/app');
+    }
+  }, [user, navigate]);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       setLoading(true);
       await signIn(email, password);
+      // Navigation is handled in AuthContext after successful sign-in
     } catch (error) {
       console.error('Sign in error:', error);
     } finally {
@@ -35,6 +44,7 @@ const Auth: React.FC = () => {
     try {
       setLoading(true);
       await signUp(email, password, username);
+      // Navigation is handled in AuthContext after successful sign-up
     } catch (error) {
       console.error('Sign up error:', error);
     } finally {
@@ -105,7 +115,7 @@ const Auth: React.FC = () => {
               </div>
             </form>
           ) : (
-            <Tabs defaultValue="signin" className="w-full">
+            <Tabs defaultValue={defaultTab} className="w-full">
               <TabsList className="grid grid-cols-2 mb-8 bg-zinc-800">
                 <TabsTrigger value="signin">Sign In</TabsTrigger>
                 <TabsTrigger value="signup">Sign Up</TabsTrigger>
