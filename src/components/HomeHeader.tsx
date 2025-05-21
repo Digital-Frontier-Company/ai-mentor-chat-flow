@@ -1,28 +1,20 @@
-
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Menu, X, LogIn, User, CreditCard, Home, MessageCircle, Settings } from 'lucide-react';
 import Logo from '@/components/ui/logo';
 import { useAuth } from '@/contexts/AuthContext';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 const HomeHeader: React.FC = () => {
-  const { user, signOut } = useAuth();
+  const {
+    user,
+    signOut
+  } = useAuth();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  
   const toggleMobileMenu = () => {
     setMobileMenuOpen(!mobileMenuOpen);
   };
-  
   const handleSignOut = async () => {
     try {
       await signOut();
@@ -31,9 +23,7 @@ const HomeHeader: React.FC = () => {
       console.error('Error signing out:', error);
     }
   };
-  
-  return (
-    <header className="py-4 border-b border-zinc-800 bg-zinc-900/95 sticky top-0 z-50">
+  return <header className="py-4 border-b border-zinc-800 bg-zinc-900/95 sticky top-0 z-50">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between">
           <div>
@@ -50,13 +40,11 @@ const HomeHeader: React.FC = () => {
             <Button variant="ghost" size="sm" asChild>
               <Link to="/pricing">Pricing</Link>
             </Button>
-            {user && (
-              <>
+            {user && <>
                 <Button variant="ghost" size="sm" asChild>
                   <Link to="/app">Dashboard</Link>
                 </Button>
-              </>
-            )}
+              </>}
             <Button variant="ghost" size="sm" asChild>
               <Link to="/legal/terms">Terms</Link>
             </Button>
@@ -67,8 +55,7 @@ const HomeHeader: React.FC = () => {
           
           {/* User Actions */}
           <div className="hidden md:block">
-            {user ? (
-              <DropdownMenu>
+            {user ? <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" size="sm" className="flex items-center gap-2">
                     <User size={16} />
@@ -100,42 +87,30 @@ const HomeHeader: React.FC = () => {
                     <span>Sign out</span>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
-              </DropdownMenu>
-            ) : (
-              <div className="flex gap-3">
+              </DropdownMenu> : <div className="flex gap-3">
                 <Button variant="outline" size="sm" asChild>
-                  <Link to="/auth">
+                  <Link to="/auth" className="chang the color of this button to green like the others">
                     Sign in
                   </Link>
                 </Button>
-                <Button 
-                  className="bg-lime-500 hover:bg-lime-600 text-zinc-900" 
-                  size="sm" 
-                  asChild
-                >
+                <Button className="bg-lime-500 hover:bg-lime-600 text-zinc-900" size="sm" asChild>
                   <Link to="/auth?signup=true">
                     Sign up free
                   </Link>
                 </Button>
-              </div>
-            )}
+              </div>}
           </div>
           
           {/* Mobile Menu Button */}
           <div className="md:hidden">
             <Button variant="ghost" size="icon" onClick={toggleMobileMenu}>
-              {mobileMenuOpen ? (
-                <X size={24} />
-              ) : (
-                <Menu size={24} />
-              )}
+              {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
             </Button>
           </div>
         </div>
         
         {/* Mobile Menu */}
-        {mobileMenuOpen && (
-          <div className="md:hidden py-4 border-t border-zinc-800 mt-4">
+        {mobileMenuOpen && <div className="md:hidden py-4 border-t border-zinc-800 mt-4">
             <nav className="flex flex-col space-y-3">
               <Button variant="ghost" size="sm" asChild onClick={toggleMobileMenu}>
                 <Link to="/">Home</Link>
@@ -143,16 +118,14 @@ const HomeHeader: React.FC = () => {
               <Button variant="ghost" size="sm" asChild onClick={toggleMobileMenu}>
                 <Link to="/pricing">Pricing</Link>
               </Button>
-              {user && (
-                <>
+              {user && <>
                   <Button variant="ghost" size="sm" asChild onClick={toggleMobileMenu}>
                     <Link to="/app">Dashboard</Link>
                   </Button>
                   <Button variant="ghost" size="sm" asChild onClick={toggleMobileMenu}>
                     <Link to="/settings">Settings</Link>
                   </Button>
-                </>
-              )}
+                </>}
               <Button variant="ghost" size="sm" asChild onClick={toggleMobileMenu}>
                 <Link to="/legal/terms">Terms</Link>
               </Button>
@@ -161,54 +134,32 @@ const HomeHeader: React.FC = () => {
               </Button>
               
               <div className="pt-3 border-t border-zinc-800">
-                {user ? (
-                  <div className="space-y-3">
+                {user ? <div className="space-y-3">
                     <div className="text-sm text-zinc-400">
                       Signed in as: <span className="font-medium text-white">{user.email}</span>
                     </div>
-                    <Button 
-                      variant="destructive" 
-                      size="sm" 
-                      className="w-full"
-                      onClick={() => {
-                        handleSignOut();
-                        toggleMobileMenu();
-                      }}
-                    >
+                    <Button variant="destructive" size="sm" className="w-full" onClick={() => {
+                handleSignOut();
+                toggleMobileMenu();
+              }}>
                       Sign out
                     </Button>
-                  </div>
-                ) : (
-                  <div className="flex flex-col gap-3">
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      asChild 
-                      onClick={toggleMobileMenu}
-                    >
+                  </div> : <div className="flex flex-col gap-3">
+                    <Button variant="outline" size="sm" asChild onClick={toggleMobileMenu}>
                       <Link to="/auth">
                         Sign in
                       </Link>
                     </Button>
-                    <Button 
-                      className="bg-lime-500 hover:bg-lime-600 text-zinc-900" 
-                      size="sm" 
-                      asChild
-                      onClick={toggleMobileMenu}
-                    >
+                    <Button className="bg-lime-500 hover:bg-lime-600 text-zinc-900" size="sm" asChild onClick={toggleMobileMenu}>
                       <Link to="/auth?signup=true">
                         Sign up free
                       </Link>
                     </Button>
-                  </div>
-                )}
+                  </div>}
               </div>
             </nav>
-          </div>
-        )}
+          </div>}
       </div>
-    </header>
-  );
+    </header>;
 };
-
 export default HomeHeader;
