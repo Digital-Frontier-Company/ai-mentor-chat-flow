@@ -120,7 +120,7 @@ export const MentorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         const transformedMentors = data.map(mentor => ({
           id: mentor.id,
           name: mentor.name,
-          icon: mentor.icon || '🧠',
+          icon: mentor.avatar_url || '🧠', // Use avatar_url as icon or default to 🧠 emoji
           description: mentor.description,
           gradient: getCategoryGradient('custom'), // Custom gradient for user mentors
           category: 'custom',
@@ -265,12 +265,12 @@ export const MentorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         learningPath: generateLearningPath(mentorTemplate.category),
       } : {
         id: sessionData.mentor_id,
-        name: 'Custom Mentor',
-        icon: '🤖',
-        description: 'A custom mentor',
+        name: sessionData.mentors.name,
+        icon: sessionData.mentors.avatar_url || '🤖', // Use avatar_url or default icon
+        description: sessionData.mentors.description,
         gradient: 'from-mentor-blue to-purple-600',
         category: 'custom',
-        expertise: 'Custom Expertise',
+        expertise: sessionData.mentors.name,
         learningPath: [],
       };
       

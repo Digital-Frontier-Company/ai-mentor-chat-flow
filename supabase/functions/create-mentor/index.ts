@@ -120,7 +120,7 @@ serve(async (req) => {
         color,
         system_prompt: systemPrompt,
         user_id: userId,
-        icon
+        avatar_url: icon  // Store the icon in the avatar_url field
       })
       .select()
       .single();
