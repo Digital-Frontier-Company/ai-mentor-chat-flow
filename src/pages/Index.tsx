@@ -9,6 +9,8 @@ import { HomeIcon, MessageCircle, Settings, LogOut } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import LoadingState from '@/components/mentor/LoadingState';
 import SkipToContent from '@/components/accessibility/SkipToContent';
+import MetaTags from '@/components/SEO/MetaTags';
+import { OrganizationSchema } from '@/components/SEO/StructuredData';
 import {
   NavigationMenu,
   NavigationMenuContent,
@@ -30,6 +32,21 @@ const Index = () => {
   
   return (
     <div className="min-h-screen bg-zinc-950 text-white">
+      {/* Add SEO meta tags */}
+      <MetaTags 
+        title="MakeMentors.io - Your AI Mentoring Dashboard"
+        description="Access your personalized AI mentors to accelerate your learning and growth."
+        keywords="AI mentor, dashboard, personalized learning, mentorship"
+      />
+      
+      {/* Add structured data for better search engine understanding */}
+      <OrganizationSchema
+        name="MakeMentors.io"
+        url="https://makementors.io"
+        logo="/lovable-uploads/bd0c9938-869e-417d-8441-834fe7445b8b.png"
+        description="MakeMentors.io helps you create personalized AI mentors for any subject, skill, or goal."
+      />
+
       <SkipToContent />
       <header 
         className="py-4 border-b border-zinc-800 bg-zinc-900"
