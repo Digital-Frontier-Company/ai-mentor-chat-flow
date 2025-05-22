@@ -101,7 +101,7 @@ const Index = () => {
             <div>
               {user ? (
                 <Button 
-                  variant="outline" 
+                  variant="default" 
                   size="sm" 
                   className="flex items-center gap-2"
                   onClick={() => signOut()}
@@ -110,7 +110,7 @@ const Index = () => {
                   <span>Sign out</span>
                 </Button>
               ) : (
-                <Button variant="outline" size="sm" asChild className="flex items-center gap-2">
+                <Button variant="default" size="sm" asChild className="flex items-center gap-2">
                   <Link to="/auth">
                     Sign in
                   </Link>

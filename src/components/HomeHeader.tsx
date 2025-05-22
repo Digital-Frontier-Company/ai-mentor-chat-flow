@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -89,12 +90,12 @@ const HomeHeader: React.FC = () => {
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu> : <div className="flex gap-3">
-                <Button className="bg-lime-500 hover:bg-lime-600 text-zinc-900" size="sm" asChild>
+                <Button size="sm" asChild>
                   <Link to="/auth">
                     Sign in
                   </Link>
                 </Button>
-                <Button className="bg-lime-500 hover:bg-lime-600 text-zinc-900" size="sm" asChild>
+                <Button size="sm" asChild>
                   <Link to="/auth?signup=true">
                     Sign up free
                   </Link>
@@ -146,12 +147,12 @@ const HomeHeader: React.FC = () => {
                       Sign out
                     </Button>
                   </div> : <div className="flex flex-col gap-3">
-                    <Button className="bg-lime-500 hover:bg-lime-600 text-zinc-900" size="sm" asChild onClick={toggleMobileMenu}>
+                    <Button size="sm" asChild onClick={toggleMobileMenu}>
                       <Link to="/auth">
                         Sign in
                       </Link>
                     </Button>
-                    <Button className="bg-lime-500 hover:bg-lime-600 text-zinc-900" size="sm" asChild onClick={toggleMobileMenu}>
+                    <Button size="sm" asChild onClick={toggleMobileMenu}>
                       <Link to="/auth?signup=true">
                         Sign up free
                       </Link>
