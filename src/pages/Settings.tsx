@@ -8,8 +8,8 @@ import AddFinancialTemplates from '@/components/admin/AddFinancialTemplates';
 const Settings = () => {
   const { user } = useAuth();
   
-  // Check if user is an admin (this is just a placeholder, you should implement proper role checking)
-  const isAdmin = user && user.email === 'admin@example.com';
+  // Check if user is an admin with the new email
+  const isAdmin = user && user.email === 'david@memphisearthmovers.com';
   
   return (
     <div className="container max-w-4xl py-8">
