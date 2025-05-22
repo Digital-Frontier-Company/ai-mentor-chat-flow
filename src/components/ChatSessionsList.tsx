@@ -39,7 +39,7 @@ const ChatSessionsList: React.FC<ChatSessionsListProps> = ({ onNewChat }) => {
   return (
     <div className="w-full space-y-4">
       <div className="flex items-center justify-between mb-2">
-        <Button variant="outline" size="sm" onClick={() => refreshUserSessions()}>Refresh</Button>
+        <Button variant="default" size="sm" onClick={() => refreshUserSessions()}>Refresh</Button>
       </div>
 
       {userSessions.length === 0 ? (
@@ -51,7 +51,7 @@ const ChatSessionsList: React.FC<ChatSessionsListProps> = ({ onNewChat }) => {
               <Button 
                 variant="default" 
                 size="sm"
-                className="mt-1 bg-emerald-500 hover:bg-emerald-600 text-zinc-900"
+                className="mt-1"
                 onClick={onNewChat}
               >
                 Start a new chat <Plus className="ml-1 h-3 w-3" />
@@ -76,7 +76,7 @@ const ChatSessionsList: React.FC<ChatSessionsListProps> = ({ onNewChat }) => {
                     </p>
                   </div>
                   <Button 
-                    variant="ghost" 
+                    variant="default" 
                     size="sm"
                     className="h-7 w-7 p-0"
                     onClick={(e) => {

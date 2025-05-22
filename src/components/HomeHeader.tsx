@@ -90,12 +90,12 @@ const HomeHeader: React.FC = () => {
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu> : <div className="flex gap-3">
-                <Button size="sm" asChild>
+                <Button size="sm" variant="default" asChild>
                   <Link to="/auth">
                     Sign in
                   </Link>
                 </Button>
-                <Button size="sm" asChild>
+                <Button size="sm" variant="default" asChild>
                   <Link to="/auth?signup=true">
                     Sign up free
                   </Link>
@@ -140,19 +140,19 @@ const HomeHeader: React.FC = () => {
                     <div className="text-sm text-zinc-400">
                       Signed in as: <span className="font-medium text-white">{user.email}</span>
                     </div>
-                    <Button variant="destructive" size="sm" className="w-full" onClick={() => {
+                    <Button variant="default" size="sm" className="w-full" onClick={() => {
                 handleSignOut();
                 toggleMobileMenu();
               }}>
                       Sign out
                     </Button>
                   </div> : <div className="flex flex-col gap-3">
-                    <Button size="sm" asChild onClick={toggleMobileMenu}>
+                    <Button size="sm" variant="default" asChild onClick={toggleMobileMenu}>
                       <Link to="/auth">
                         Sign in
                       </Link>
                     </Button>
-                    <Button size="sm" asChild onClick={toggleMobileMenu}>
+                    <Button size="sm" variant="default" asChild onClick={toggleMobileMenu}>
                       <Link to="/auth?signup=true">
                         Sign up free
                       </Link>
