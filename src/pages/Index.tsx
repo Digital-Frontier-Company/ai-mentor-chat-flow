@@ -8,6 +8,17 @@ import { Button } from '@/components/ui/button';
 import { HomeIcon, MessageCircle, Settings, LogOut } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import LoadingState from '@/components/mentor/LoadingState';
+import SkipToContent from '@/components/accessibility/SkipToContent';
+import {
+  NavigationMenu,
+  NavigationMenuContent,
+  NavigationMenuItem,
+  NavigationMenuLink,
+  NavigationMenuList,
+  NavigationMenuTrigger,
+  navigationMenuTriggerStyle,
+} from "@/components/ui/navigation-menu";
+import { cn } from '@/lib/utils';
 
 const Index = () => {
   const { user, signOut, loading } = useAuth();
@@ -19,6 +30,7 @@ const Index = () => {
   
   return (
     <div className="min-h-screen bg-zinc-950 text-white">
+      <SkipToContent />
       <header 
         className="py-4 border-b border-zinc-800 bg-zinc-900"
         style={{
@@ -36,25 +48,37 @@ const Index = () => {
               <Logo size="md" />
             </div>
             
-            <nav className="hidden md:flex space-x-4">
-              <Button variant="ghost" size="sm" asChild>
-                <Link to="/" className="flex items-center gap-2">
-                  <HomeIcon size={18} />
-                  <span>Home</span>
-                </Link>
-              </Button>
-              <Button variant="ghost" size="sm" asChild>
-                <Link to="/app" className="flex items-center gap-2">
-                  <MessageCircle size={18} />
-                  <span>Chat</span>
-                </Link>
-              </Button>
-              <Button variant="ghost" size="sm" asChild>
-                <Link to="/settings" className="flex items-center gap-2">
-                  <Settings size={18} />
-                  <span>Settings</span>
-                </Link>
-              </Button>
+            <nav aria-label="Main Navigation" className="hidden md:block">
+              <NavigationMenu>
+                <NavigationMenuList>
+                  <NavigationMenuItem>
+                    <Link to="/" legacyBehavior passHref>
+                      <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+                        <HomeIcon size={18} className="mr-2" />
+                        <span>Home</span>
+                      </NavigationMenuLink>
+                    </Link>
+                  </NavigationMenuItem>
+                  
+                  <NavigationMenuItem>
+                    <Link to="/app" legacyBehavior passHref>
+                      <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+                        <MessageCircle size={18} className="mr-2" />
+                        <span>Chat</span>
+                      </NavigationMenuLink>
+                    </Link>
+                  </NavigationMenuItem>
+                  
+                  <NavigationMenuItem>
+                    <Link to="/settings" legacyBehavior passHref>
+                      <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+                        <Settings size={18} className="mr-2" />
+                        <span>Settings</span>
+                      </NavigationMenuLink>
+                    </Link>
+                  </NavigationMenuItem>
+                </NavigationMenuList>
+              </NavigationMenu>
             </nav>
             
             <div>
@@ -80,13 +104,13 @@ const Index = () => {
         </div>
       </header>
       
-      <main className="py-8">
+      <main id="main-content" className="py-8">
         <MentorProvider>
           <MentorApp />
         </MentorProvider>
       </main>
       
-      <footer className="py-6 text-center text-sm text-zinc-500 border-t border-zinc-800">
+      <footer className="py-6 text-center text-sm text-zinc-500 border-t border-zinc-800" role="contentinfo">
         <div className="container">
           <p>© {new Date().getFullYear()} MakeMentors.io. All rights reserved.</p>
         </div>

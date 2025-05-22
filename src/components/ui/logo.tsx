@@ -1,17 +1,20 @@
 
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { cn } from '@/lib/utils';
 
 interface LogoProps {
   size?: 'sm' | 'md' | 'lg' | 'xl';
   withText?: boolean;
   className?: string;
+  asLink?: boolean;
 }
 
 const Logo: React.FC<LogoProps> = ({ 
   size = 'md', 
   withText = true,
-  className = ''
+  className = '',
+  asLink = true
 }) => {
   const sizeClasses = {
     sm: 'h-6',
@@ -20,8 +23,8 @@ const Logo: React.FC<LogoProps> = ({
     xl: 'h-16'
   };
 
-  return (
-    <Link to="/" className={`flex items-center gap-2 ${className}`}>
+  const content = (
+    <>
       <img 
         src="/lovable-uploads/bd0c9938-869e-417d-8441-834fe7445b8b.png" 
         alt="MakeMentors.io Logo" 
@@ -32,7 +35,17 @@ const Logo: React.FC<LogoProps> = ({
           MakeMentors.io
         </span>
       )}
+    </>
+  );
+
+  return asLink ? (
+    <Link to="/" className={cn(`flex items-center gap-2`, className)}>
+      {content}
     </Link>
+  ) : (
+    <div className={cn(`flex items-center gap-2`, className)}>
+      {content}
+    </div>
   );
 };
 
