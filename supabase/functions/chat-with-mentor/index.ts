@@ -66,21 +66,26 @@ serve(async (req) => {
     
     // If no chat session provided, create a new one
     if (!sessionId) {
-      const { data: session, error: sessionError } = await supabase
-        .from("chat_sessions")
-        .insert({
-          mentor_id: mentorId,
-          user_id: userId,
-          name: `Chat with ${mentor.name}`, // Default name based on mentor
-        })
-        .select()
-        .single();
-      
-      if (sessionError) {
-        throw new Error(`Error creating chat session: ${sessionError.message}`);
+      try {
+        const { data: session, error: sessionError } = await supabase
+          .from("chat_sessions")
+          .insert({
+            mentor_id: mentorId,
+            user_id: userId,
+            name: `Chat with ${mentor.name}`, // Default name based on mentor
+          })
+          .select()
+          .single();
+        
+        if (sessionError) {
+          throw new Error(`Error creating chat session: ${sessionError.message}`);
+        }
+        
+        sessionId = session.id;
+        console.log("Created new chat session for user:", userId);
+      } catch (error) {
+        throw new Error(`Error creating chat session: ${error.message}`);
       }
-      
-      sessionId = session.id;
     }
     
     // Get recent message history if not provided in the request
@@ -111,17 +116,21 @@ serve(async (req) => {
     const userMessage = messages[messages.length - 1]?.content || "";
     
     // Save the user message
-    const { error: userMsgError } = await supabase
-      .from("chat_messages")
-      .insert({
-        chat_session_id: sessionId,
-        user_id: userId,
-        role: "user",
-        content: userMessage,
-      });
-    
-    if (userMsgError) {
-      console.error(`Error saving user message: ${userMsgError.message}`);
+    try {
+      const { error: userMsgError } = await supabase
+        .from("chat_messages")
+        .insert({
+          chat_session_id: sessionId,
+          user_id: userId,
+          role: "user",
+          content: userMessage,
+        });
+      
+      if (userMsgError) {
+        throw new Error(`Error saving user message: ${userMsgError.message}`);
+      }
+    } catch (error) {
+      console.error(`Error saving user message: ${error.message}`);
       // Continue anyway to try to get a response
     }
     
@@ -134,6 +143,15 @@ serve(async (req) => {
       { role: "system", content: systemPrompt },
       ...conversationHistory
     ];
+
+    // Create response headers with session ID
+    const responseHeaders = { 
+      ...corsHeaders
+    };
+    
+    if (sessionId) {
+      responseHeaders["X-Chat-Session-Id"] = sessionId;
+    }
 
     // If stream is true, use streaming response
     if (stream) {
@@ -156,7 +174,7 @@ serve(async (req) => {
         const errorText = await response.text();
         throw new Error(`OpenAI API error: ${errorText}`);
       }
-
+      
       // Process the response in a background task
       const fullResponse = { content: "" };
       const decoder = new TextDecoder();
@@ -196,24 +214,34 @@ serve(async (req) => {
 
           // After collecting the full response, save it to the database
           if (fullResponse.content) {
-            await supabase
-              .from("chat_messages")
-              .insert({
-                chat_session_id: sessionId,
-                user_id: userId,
-                role: "assistant",
-                content: fullResponse.content,
-              });
+            try {
+              const { error: saveError } = await supabase
+                .from("chat_messages")
+                .insert({
+                  chat_session_id: sessionId,
+                  user_id: userId,
+                  role: "assistant",
+                  content: fullResponse.content,
+                });
+                
+              if (saveError) {
+                console.error(`Error saving assistant message: ${saveError.message}`);
+              } else {
+                console.log("Successfully saved assistant message to database");
+              }
+            } catch (error) {
+              console.error(`Error saving assistant message: ${error.message}`);
+            }
           }
         } catch (error) {
           console.error('Error processing stream:', error);
         }
       })());
 
-      // Return the streaming response directly
+      // Return the streaming response with session ID
       return new Response(response.body, {
         headers: { 
-          ...corsHeaders, 
+          ...responseHeaders, 
           "Content-Type": "text/event-stream"
         },
       });
@@ -242,27 +270,31 @@ serve(async (req) => {
       const assistantResponse = data.choices[0].message.content;
       
       // Save the assistant message
-      const { error: assistantMsgError } = await supabase
-        .from("chat_messages")
-        .insert({
-          chat_session_id: sessionId,
-          user_id: userId,
-          role: "assistant",
-          content: assistantResponse,
-        });
-      
-      if (assistantMsgError) {
-        throw new Error(`Error saving assistant message: ${assistantMsgError.message}`);
+      try {
+        const { error: assistantMsgError } = await supabase
+          .from("chat_messages")
+          .insert({
+            chat_session_id: sessionId,
+            user_id: userId,
+            role: "assistant",
+            content: assistantResponse,
+          });
+        
+        if (assistantMsgError) {
+          throw new Error(`Error saving assistant message: ${assistantMsgError.message}`);
+        }
+      } catch (error) {
+        throw new Error(`Error saving assistant message: ${error.message}`);
       }
 
-      // Return the response
+      // Return the response with session ID
       return new Response(
         JSON.stringify({ 
           response: assistantResponse, 
           sessionId,
         }),
         {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          headers: { ...responseHeaders, "Content-Type": "application/json" },
         }
       );
     }

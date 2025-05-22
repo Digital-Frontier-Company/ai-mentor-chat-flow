@@ -84,7 +84,7 @@ export const getMentorResponse = async (
     const user = sessionData?.session?.user;
 
     // Get the Supabase project URL for functions
-    const functionUrl = "https://bapditcjlxctrisoixpg.supabase.co/functions/v1/chat-completion";
+    const functionUrl = "https://bapditcjlxctrisoixpg.supabase.co/functions/v1/chat-with-mentor";
     
     // Get current session token
     const accessToken = sessionData?.session?.access_token || '';
@@ -146,6 +146,7 @@ export const getMentorResponse = async (
             const { done, value } = await reader.read();
             
             if (done) {
+              console.log("Stream completed, calling onComplete with session ID:", responseChatSessionId);
               onComplete(responseChatSessionId || undefined);
               break;
             }
@@ -167,6 +168,7 @@ export const getMentorResponse = async (
               }
               
               if (done) {
+                console.log("Stream marked as done, calling onComplete with session ID:", responseChatSessionId);
                 onComplete(responseChatSessionId || undefined);
                 return;
               }
@@ -183,6 +185,7 @@ export const getMentorResponse = async (
       
       // Return a cleanup function
       return () => {
+        console.log("Cancelling stream");
         reader.cancel('User cancelled the stream').catch(console.error);
       };
     } else {
@@ -194,14 +197,19 @@ export const getMentorResponse = async (
       }
 
       // Extract the AI response
-      const aiResponse = data.choices[0].message.content;
+      const aiResponse = data.choices?.[0]?.message?.content || data.response || "No response received";
       const sessionId = data.sessionId || responseChatSessionId;
+      
+      console.log("Received non-streaming response, session ID:", sessionId);
       
       // Fall back to simulated streaming
       return simulateStreamingResponse(
         aiResponse, 
         onProgress, 
-        () => onComplete(sessionId)
+        () => {
+          console.log("Simulated streaming complete, calling onComplete with session ID:", sessionId);
+          onComplete(sessionId);
+        }
       );
     }
   } catch (error) {

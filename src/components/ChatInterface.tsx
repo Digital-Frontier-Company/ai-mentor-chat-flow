@@ -46,13 +46,18 @@ const ChatInterface: React.FC = () => {
   // Initialize chat session if not already done
   useEffect(() => {
     const initializeChat = async () => {
-      if (user && selectedMentor && !chatSessionId) {
-        console.log("Initializing new chat session");
-        
-        // If we have messages but no session ID yet, a welcome message might have been added
-        // We'll create a chat session and then save the welcome message
+      if (!user || !selectedMentor) {
+        console.log("Missing user or mentor, cannot initialize chat");
+        return;
+      }
+
+      console.log("Chat initialization - Session ID:", chatSessionId, "Messages:", messages.length);
+
+      if (!chatSessionId) {
         if (messages.length > 0) {
           try {
+            console.log("Creating new chat session for existing messages");
+            
             // Create a new chat session
             const { data: session, error } = await supabase
               .from('chat_sessions')
@@ -64,7 +69,10 @@ const ChatInterface: React.FC = () => {
               .select()
               .single();
             
-            if (error) throw error;
+            if (error) {
+              console.error("Error creating chat session:", error);
+              throw error;
+            }
             
             console.log('Created new chat session:', session);
             setChatSessionId(session.id);
@@ -83,6 +91,8 @@ const ChatInterface: React.FC = () => {
               
               if (msgError) {
                 console.error("Error saving welcome message:", msgError);
+              } else {
+                console.log("Welcome message saved to database");
               }
             }
           } catch (error) {
@@ -95,8 +105,25 @@ const ChatInterface: React.FC = () => {
           }
         } else {
           // No messages yet, add welcome message
+          console.log("Adding welcome message for new chat");
           const welcomeMessage = getWelcomeMessage(selectedMentor, userPreferences);
           addMessage(welcomeMessage, 'assistant');
+        }
+      } else {
+        // Already have a session ID, make sure messages are loaded
+        console.log("Chat session exists:", chatSessionId);
+        if (messages.length === 0) {
+          const success = await loadChatSession(chatSessionId);
+          if (!success) {
+            console.error("Failed to load existing chat session");
+            toast({
+              title: "Error",
+              description: "Failed to load chat history.",
+              variant: "destructive",
+            });
+          } else {
+            console.log("Successfully loaded chat session");
+          }
         }
       }
     };
@@ -109,7 +136,7 @@ const ChatInterface: React.FC = () => {
         streamCleanup();
       }
     };
-  }, [user, selectedMentor, chatSessionId, messages.length]);
+  }, [user, selectedMentor, chatSessionId]);
 
   const handleSendMessage = async () => {
     if (!userInput.trim() || isTyping || !selectedMentor) return;
@@ -131,6 +158,8 @@ const ChatInterface: React.FC = () => {
     }
 
     try {
+      console.log("Sending message with session ID:", chatSessionId);
+      
       // Get and stream response
       const cleanup = await getMentorResponse(
         userInput.trim(),
@@ -142,14 +171,16 @@ const ChatInterface: React.FC = () => {
         },
         (sessionId) => {
           // When streaming complete
+          console.log("Stream complete, session ID:", sessionId);
+          
           if (currentResponse) {
             addMessage(currentResponse, 'assistant');
           }
           
           // Update the chat session ID if it was returned
-          if (sessionId && !chatSessionId) {
+          if (sessionId && (!chatSessionId || sessionId !== chatSessionId)) {
+            console.log("Setting chat session ID:", sessionId);
             setChatSessionId(sessionId);
-            console.log("Updated chat session ID:", sessionId);
             // Refresh user sessions list
             refreshUserSessions();
           }
