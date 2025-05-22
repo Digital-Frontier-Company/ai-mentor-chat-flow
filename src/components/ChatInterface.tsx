@@ -22,7 +22,9 @@ const ChatInterface: React.FC = () => {
     setCurrentStep, 
     resetChat,
     chatSessionId,
-    setChatSessionId
+    setChatSessionId,
+    loadChatSession,
+    refreshUserSessions
   } = useMentor();
   
   const { user } = useAuth();
@@ -41,37 +43,60 @@ const ChatInterface: React.FC = () => {
     scrollToBottom();
   }, [messages, currentResponse]);
 
+  // Initialize chat session if not already done
   useEffect(() => {
-    // Initialize chat session if not already done
     const initializeChat = async () => {
-      if (user && selectedMentor && !chatSessionId && messages.length === 0) {
-        try {
-          // Create a new chat session
-          const { data: session, error } = await supabase
-            .from('chat_sessions')
-            .insert({
-              mentor_id: selectedMentor.id,
-              user_id: user.id,
-              name: `Chat with ${selectedMentor.name}`
-            })
-            .select()
-            .single();
-          
-          if (error) throw error;
-          
-          console.log('Created new chat session:', session);
-          setChatSessionId(session.id);
-          
-          // Add welcome message
+      if (user && selectedMentor && !chatSessionId) {
+        console.log("Initializing new chat session");
+        
+        // If we have messages but no session ID yet, a welcome message might have been added
+        // We'll create a chat session and then save the welcome message
+        if (messages.length > 0) {
+          try {
+            // Create a new chat session
+            const { data: session, error } = await supabase
+              .from('chat_sessions')
+              .insert({
+                mentor_id: selectedMentor.id,
+                user_id: user.id,
+                name: `Chat with ${selectedMentor.name}`
+              })
+              .select()
+              .single();
+            
+            if (error) throw error;
+            
+            console.log('Created new chat session:', session);
+            setChatSessionId(session.id);
+            
+            // Add existing welcome message to the database
+            const welcomeMessage = messages.find(msg => msg.role === 'assistant');
+            if (welcomeMessage) {
+              const { error: msgError } = await supabase
+                .from('chat_messages')
+                .insert({
+                  chat_session_id: session.id,
+                  user_id: user.id,
+                  role: 'assistant',
+                  content: welcomeMessage.content
+                });
+              
+              if (msgError) {
+                console.error("Error saving welcome message:", msgError);
+              }
+            }
+          } catch (error) {
+            console.error('Error creating chat session:', error);
+            toast({
+              title: "Warning",
+              description: "Your chat will not be saved. You can continue, but progress won't be preserved.",
+              variant: "destructive",
+            });
+          }
+        } else {
+          // No messages yet, add welcome message
           const welcomeMessage = getWelcomeMessage(selectedMentor, userPreferences);
           addMessage(welcomeMessage, 'assistant');
-        } catch (error) {
-          console.error('Error creating chat session:', error);
-          toast({
-            title: "Warning",
-            description: "Your chat will not be saved. You can continue, but progress won't be preserved.",
-            variant: "destructive",
-          });
         }
       }
     };
@@ -115,15 +140,25 @@ const ChatInterface: React.FC = () => {
         (text) => {
           setCurrentResponse(text);
         },
-        () => {
+        (sessionId) => {
           // When streaming complete
           if (currentResponse) {
             addMessage(currentResponse, 'assistant');
           }
+          
+          // Update the chat session ID if it was returned
+          if (sessionId && !chatSessionId) {
+            setChatSessionId(sessionId);
+            console.log("Updated chat session ID:", sessionId);
+            // Refresh user sessions list
+            refreshUserSessions();
+          }
+          
           setCurrentResponse('');
           setIsTyping(false);
           setStreamCleanup(null);
-        }
+        },
+        chatSessionId
       );
       
       // Store the cleanup function

@@ -66,7 +66,8 @@ export const getMentorResponse = async (
   userPreferences: UserPreferences,
   mentor: MentorType,
   onProgress: (text: string) => void,
-  onComplete: () => void
+  onComplete: (sessionId?: string) => void,
+  chatSessionId?: string | null
 ) => {
   try {
     // Format messages for the API
@@ -92,6 +93,7 @@ export const getMentorResponse = async (
       messages: apiMessages.length,
       mentorId: mentor.id,
       userId: user?.id,
+      chatSessionId,
       userPreferences
     });
 
@@ -107,6 +109,7 @@ export const getMentorResponse = async (
         userPreferences,
         mentorId: mentor.id,
         userId: user?.id,
+        chatSessionId,
         stream: true
       })
     });
@@ -115,6 +118,12 @@ export const getMentorResponse = async (
       const errorText = await response.text();
       console.error("Error response from edge function:", errorText);
       throw new Error(`Error from edge function: ${errorText}`);
+    }
+
+    // Extract the chat session ID from headers if available
+    const responseChatSessionId = response.headers.get('X-Chat-Session-Id');
+    if (responseChatSessionId) {
+      console.log("Received chat session ID from response:", responseChatSessionId);
     }
 
     // Check if we got a streaming response
@@ -137,7 +146,7 @@ export const getMentorResponse = async (
             const { done, value } = await reader.read();
             
             if (done) {
-              onComplete();
+              onComplete(responseChatSessionId || undefined);
               break;
             }
             
@@ -158,14 +167,14 @@ export const getMentorResponse = async (
               }
               
               if (done) {
-                onComplete();
+                onComplete(responseChatSessionId || undefined);
                 return;
               }
             }
           }
         } catch (error) {
           console.error('Error processing stream:', error);
-          onComplete();
+          onComplete(responseChatSessionId || undefined);
         }
       };
 
@@ -186,9 +195,14 @@ export const getMentorResponse = async (
 
       // Extract the AI response
       const aiResponse = data.choices[0].message.content;
+      const sessionId = data.sessionId || responseChatSessionId;
       
       // Fall back to simulated streaming
-      return simulateStreamingResponse(aiResponse, onProgress, onComplete);
+      return simulateStreamingResponse(
+        aiResponse, 
+        onProgress, 
+        () => onComplete(sessionId)
+      );
     }
   } catch (error) {
     console.error('Error in getMentorResponse:', error);

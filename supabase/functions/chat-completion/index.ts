@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
 
@@ -36,6 +35,7 @@ serve(async (req) => {
       userPreferences, 
       mentorId, 
       userId,
+      chatSessionId,
       stream = true 
     } = body;
     
@@ -46,7 +46,7 @@ serve(async (req) => {
     // Get mentor information
     const { data: mentor, error: mentorError } = await supabase
       .from("mentors")
-      .select("name, description, system_prompt")
+      .select("name, description, avatar_url")
       .eq("id", mentorId)
       .single();
     
@@ -56,6 +56,7 @@ serve(async (req) => {
 
     // If mentor not found in mentors table, check mentor_templates table
     let mentorPrompt = "";
+    let mentorName = "";
     if (!mentor) {
       const { data: template, error: templateError } = await supabase
         .from("mentor_templates")
@@ -70,16 +71,67 @@ serve(async (req) => {
       } else if (template) {
         mentorPrompt = template.system_prompt_base || 
           `You are a ${template.display_name}. ${template.description_for_user}`;
+        mentorName = template.display_name;
       }
     } else {
-      mentorPrompt = mentor.system_prompt || 
-        `You are ${mentor.name}. ${mentor.description}`;
+      mentorPrompt = `You are ${mentor.name}. ${mentor.description}`;
+      mentorName = mentor.name;
     }
 
     if (!mentorPrompt) {
       mentorPrompt = "You are a helpful AI assistant.";
     }
     
+    // Manage chat session ID
+    let sessionId = chatSessionId;
+    
+    if (!sessionId && userId) {
+      // Create a new session if one wasn't provided
+      console.log("Creating new chat session for user:", userId);
+      try {
+        const { data: session, error: sessionError } = await supabase
+          .from("chat_sessions")
+          .insert({
+            mentor_id: mentorId,
+            user_id: userId,
+            name: `Chat with ${mentorName || 'Mentor'}`
+          })
+          .select()
+          .single();
+        
+        if (sessionError) throw sessionError;
+        
+        console.log("Created new chat session:", session.id);
+        sessionId = session.id;
+      } catch (error) {
+        console.error("Error creating chat session:", error);
+        // Continue anyway to try to get a response
+      }
+    }
+    
+    // Save the user's message if we have a session and a user
+    if (sessionId && userId && messages.length > 0) {
+      const userMessage = messages[messages.length - 1];
+      if (userMessage.role === 'user') {
+        try {
+          console.log("Saving user message to session:", sessionId);
+          const { error: messageError } = await supabase
+            .from("chat_messages")
+            .insert({
+              chat_session_id: sessionId,
+              user_id: userId,
+              role: 'user',
+              content: userMessage.content
+            });
+          
+          if (messageError) throw messageError;
+        } catch (error) {
+          console.error("Error saving user message:", error);
+          // Continue anyway to try to get a response
+        }
+      }
+    }
+
     // Build system message
     const systemMessage = {
       role: "system",
@@ -115,13 +167,76 @@ serve(async (req) => {
         throw new Error(`Error from OpenAI API: ${errorText}`);
       }
 
+      // Process the response in a background task
+      const fullResponse = { content: "" };
+      const decoder = new TextDecoder();
+
+      // Use EdgeRuntime to process the stream in the background
+      EdgeRuntime.waitUntil((async () => {
+        const reader = response.body?.getReader();
+        if (!reader) return;
+
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            const chunk = decoder.decode(value, { stream: true });
+            const lines = chunk
+              .split('\n')
+              .filter(line => line.trim().startsWith('data: '));
+
+            for (const line of lines) {
+              const data = line.replace(/^data: /, '').trim();
+              
+              if (data === '[DONE]') continue;
+              
+              try {
+                const json = JSON.parse(data);
+                const content = json.choices?.[0]?.delta?.content || '';
+                
+                if (content) {
+                  fullResponse.content += content;
+                }
+              } catch (e) {
+                console.error('Error parsing SSE data:', e);
+              }
+            }
+          }
+
+          // After collecting the full response, save it to the database
+          if (fullResponse.content && sessionId && userId) {
+            console.log("Saving assistant response to database for session:", sessionId);
+            try {
+              const { error: assistantMsgError } = await supabase
+                .from("chat_messages")
+                .insert({
+                  chat_session_id: sessionId,
+                  user_id: userId,
+                  role: "assistant",
+                  content: fullResponse.content,
+                });
+              
+              if (assistantMsgError) throw assistantMsgError;
+              console.log("Assistant response saved successfully");
+            } catch (error) {
+              console.error("Error saving assistant message:", error);
+            }
+          }
+        } catch (error) {
+          console.error('Error processing stream:', error);
+        }
+      })());
+
+      // Add session ID to response headers so frontend can keep track of it
+      const responseHeaders = { 
+        ...corsHeaders, 
+        "Content-Type": "text/event-stream",
+        "X-Chat-Session-Id": sessionId || ""
+      };
+
       // Return the streaming response directly
-      return new Response(response.body, {
-        headers: { 
-          ...corsHeaders, 
-          "Content-Type": "text/event-stream"
-        },
-      });
+      return new Response(response.body, { headers: responseHeaders });
     } else {
       // Non-streaming response (legacy support)
       const response = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -144,10 +259,36 @@ serve(async (req) => {
         throw new Error(data.error.message);
       }
 
+      const assistantResponse = data.choices[0].message.content;
+
+      // Save the assistant's response if we have a session and a user
+      if (sessionId && userId) {
+        try {
+          const { error: assistantMsgError } = await supabase
+            .from("chat_messages")
+            .insert({
+              chat_session_id: sessionId,
+              user_id: userId,
+              role: "assistant",
+              content: assistantResponse,
+            });
+          
+          if (assistantMsgError) throw assistantMsgError;
+        } catch (error) {
+          console.error("Error saving assistant message:", error);
+        }
+      }
+
       // Return the AI response
-      return new Response(JSON.stringify(data), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({ 
+          response: assistantResponse, 
+          sessionId 
+        }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
     }
   } catch (error) {
     console.error("Error processing request:", error);
