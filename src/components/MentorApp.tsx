@@ -4,9 +4,9 @@ import { useMentor } from '@/contexts/MentorContext';
 import MentorSelection from './MentorSelection';
 import CustomizationForm from './CustomizationForm';
 import ChatInterface from './ChatInterface';
+import ChatSessionsList from './ChatSessionsList';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Plus } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
@@ -14,6 +14,10 @@ const MentorApp: React.FC = () => {
   const { currentStep, setCurrentStep } = useMentor();
   const { user } = useAuth();
   const navigate = useNavigate();
+  
+  const handleNewChat = () => {
+    setCurrentStep('select');
+  };
   
   const renderCurrentStep = () => {
     switch (currentStep) {
@@ -46,16 +50,20 @@ const MentorApp: React.FC = () => {
                 className="rounded-full h-16 w-16 mb-4"
                 onClick={() => setCurrentStep('select')}
               >
-                <Plus size={24} />
+                <span className="text-2xl">+</span>
               </Button>
               <h3 className="text-xl font-medium mb-2">Create New Mentor</h3>
               <p className="text-zinc-400 text-center">Design a custom AI mentor tailored to your learning needs</p>
             </CardContent>
           </Card>
           
-          {/* Render the actual mentor selection component */}
+          {/* Render either mentor selection or chat history */}
           <div className="lg:col-span-3">
-            {renderCurrentStep()}
+            {user ? (
+              <ChatSessionsList onNewChat={handleNewChat} />
+            ) : (
+              renderCurrentStep()
+            )}
           </div>
         </div>
       </div>

@@ -31,32 +31,59 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const body = await req.json();
-    const { messages, userPreferences, mentorId, stream = true } = body;
-
+    const { 
+      messages, 
+      userPreferences, 
+      mentorId, 
+      userId,
+      stream = true 
+    } = body;
+    
     if (!messages || !Array.isArray(messages)) {
-      throw new Error("Invalid messages format");
+      throw new Error("Mentor ID and messages array are required");
+    }
+    
+    // Get mentor information
+    const { data: mentor, error: mentorError } = await supabase
+      .from("mentors")
+      .select("name, description, system_prompt")
+      .eq("id", mentorId)
+      .single();
+    
+    if (mentorError && !mentorError.message.includes("No rows found")) {
+      console.error("Error fetching mentor:", mentorError);
     }
 
-    // Get mentor details if mentorId is provided
+    // If mentor not found in mentors table, check mentor_templates table
     let mentorPrompt = "";
-    if (mentorId) {
-      const { data: mentor, error: mentorError } = await supabase
-        .from("mentors")
+    if (!mentor) {
+      const { data: template, error: templateError } = await supabase
+        .from("mentor_templates")
         .select("*")
-        .eq("id", mentorId)
+        .eq("template_id", mentorId)
         .single();
       
-      if (mentorError) {
-        console.error("Error fetching mentor:", mentorError);
-      } else if (mentor) {
-        mentorPrompt = mentor.system_prompt || `You are a ${mentor.name}. ${mentor.description}`;
+      if (templateError) {
+        if (!templateError.message.includes("No rows found")) {
+          console.error("Error fetching mentor template:", templateError);
+        }
+      } else if (template) {
+        mentorPrompt = template.system_prompt_base || 
+          `You are a ${template.display_name}. ${template.description_for_user}`;
       }
+    } else {
+      mentorPrompt = mentor.system_prompt || 
+        `You are ${mentor.name}. ${mentor.description}`;
     }
 
+    if (!mentorPrompt) {
+      mentorPrompt = "You are a helpful AI assistant.";
+    }
+    
     // Build system message
     const systemMessage = {
       role: "system",
-      content: mentorPrompt || "You are a helpful AI assistant."
+      content: mentorPrompt
     };
 
     if (userPreferences) {

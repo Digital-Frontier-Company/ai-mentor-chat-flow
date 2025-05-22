@@ -7,6 +7,9 @@ import { Card, CardContent } from '@/components/ui/card';
 import { ArrowLeft, Send } from 'lucide-react';
 import { getMentorResponse } from '@/utils/openaiApi';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { getWelcomeMessage } from '@/utils/openaiApi';
 
 const ChatInterface: React.FC = () => {
   const { 
@@ -17,9 +20,12 @@ const ChatInterface: React.FC = () => {
     isTyping, 
     setIsTyping, 
     setCurrentStep, 
-    resetChat 
+    resetChat,
+    chatSessionId,
+    setChatSessionId
   } = useMentor();
   
+  const { user } = useAuth();
   const [userInput, setUserInput] = useState('');
   const [currentResponse, setCurrentResponse] = useState('');
   const [streamCleanup, setStreamCleanup] = useState<(() => void) | null>(null);
@@ -36,13 +42,49 @@ const ChatInterface: React.FC = () => {
   }, [messages, currentResponse]);
 
   useEffect(() => {
+    // Initialize chat session if not already done
+    const initializeChat = async () => {
+      if (user && selectedMentor && !chatSessionId && messages.length === 0) {
+        try {
+          // Create a new chat session
+          const { data: session, error } = await supabase
+            .from('chat_sessions')
+            .insert({
+              mentor_id: selectedMentor.id,
+              user_id: user.id,
+              name: `Chat with ${selectedMentor.name}`
+            })
+            .select()
+            .single();
+          
+          if (error) throw error;
+          
+          console.log('Created new chat session:', session);
+          setChatSessionId(session.id);
+          
+          // Add welcome message
+          const welcomeMessage = getWelcomeMessage(selectedMentor, userPreferences);
+          addMessage(welcomeMessage, 'assistant');
+        } catch (error) {
+          console.error('Error creating chat session:', error);
+          toast({
+            title: "Warning",
+            description: "Your chat will not be saved. You can continue, but progress won't be preserved.",
+            variant: "destructive",
+          });
+        }
+      }
+    };
+    
+    initializeChat();
+    
     // Cleanup function for any active streams when component unmounts
     return () => {
       if (streamCleanup) {
         streamCleanup();
       }
     };
-  }, [streamCleanup]);
+  }, [user, selectedMentor, chatSessionId, messages.length]);
 
   const handleSendMessage = async () => {
     if (!userInput.trim() || isTyping || !selectedMentor) return;

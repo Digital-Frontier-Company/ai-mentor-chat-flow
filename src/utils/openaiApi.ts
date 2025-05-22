@@ -78,11 +78,14 @@ export const getMentorResponse = async (
       content: userMessage
     });
 
+    // Get the current user's session
+    const { data: sessionData } = await supabase.auth.getSession();
+    const user = sessionData?.session?.user;
+
     // Get the Supabase project URL for functions
     const functionUrl = "https://bapditcjlxctrisoixpg.supabase.co/functions/v1/chat-completion";
     
     // Get current session token
-    const { data: sessionData } = await supabase.auth.getSession();
     const accessToken = sessionData?.session?.access_token || '';
 
     // Call our edge function with streaming enabled
@@ -96,6 +99,7 @@ export const getMentorResponse = async (
         messages: apiMessages,
         userPreferences,
         mentorId: mentor.id,
+        userId: user?.id,
         stream: true
       })
     });
@@ -193,5 +197,5 @@ export const getMentorResponse = async (
 // Function to get a welcome message from the mentor
 export const getWelcomeMessage = (mentor: MentorType, userPreferences: UserPreferences): string => {
   const mentorName = mentor.name.replace('Template', '').trim();
-  return `Hello ${userPreferences.name}! I'm your ${mentorName} mentor. I'm here to help you achieve your goal: "${userPreferences.goal}". Based on your ${userPreferences.experience} experience level, I'll tailor my guidance accordingly. What specific assistance do you need today?`;
+  return `Hello ${userPreferences.name || 'there'}! I'm your ${mentorName} mentor. I'm here to help you achieve your goal: "${userPreferences.goal || 'learning'}". Based on your ${userPreferences.experience} experience level, I'll tailor my guidance accordingly. What specific assistance do you need today?`;
 };
