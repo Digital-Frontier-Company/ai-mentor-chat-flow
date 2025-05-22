@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -69,16 +68,50 @@ export const MentorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [chatSessionId, setChatSessionId] = useState<string | null>(null);
   const [userSessions, setUserSessions] = useState<Array<{id: string, name: string, mentor_id: string}>>([]);
   const [userMentors, setUserMentors] = useState<MentorType[]>([]);
+  const [mentors, setMentors] = useState<MentorType[]>([]);
   const { user } = useAuth();
   const { toast } = useToast();
 
-  // Load user sessions and mentors on mount and when user changes
+  // Load mentor templates from database on first render
   useEffect(() => {
+    loadMentorTemplates();
+    
     if (user) {
       refreshUserSessions();
       loadUserMentors();
     }
   }, [user]);
+
+  // Load mentor templates from the database
+  const loadMentorTemplates = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('mentor_templates')
+        .select('*');
+      
+      if (error) throw error;
+      
+      if (data && data.length > 0) {
+        // Transform to MentorType format
+        const transformedMentors = data.map(template => ({
+          id: template.template_id,
+          name: template.display_name || template.default_mentor_name,
+          icon: template.icon || '🧠',
+          description: template.description_for_user,
+          gradient: getCategoryGradient(template.category),
+          category: template.category,
+          expertise: template.default_mentor_name,
+          learningPath: generateLearningPath(template.category),
+        }));
+        
+        setMentors(transformedMentors);
+      }
+    } catch (error) {
+      console.error('Error loading mentor templates:', error);
+      // Don't show a toast here as it might be distracting on first load
+      // We'll use the fallback templates instead
+    }
+  };
 
   // Refresh the user's chat sessions
   const refreshUserSessions = async () => {
@@ -242,18 +275,23 @@ export const MentorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       
       if (messagesError) throw messagesError;
       
-      // Get the mentor template
-      const { data: mentorTemplate, error: mentorError } = await supabase
-        .from('mentor_templates')
-        .select('*')
-        .eq('template_id', sessionData.mentor_id)
-        .single();
-      
-      if (mentorError && !mentorError.message.includes("No rows found")) {
-        throw mentorError;
+      // Try to get the mentor template if it's a template-based mentor
+      let mentorTemplate = null;
+      try {
+        const { data: template, error: templateError } = await supabase
+          .from('mentor_templates')
+          .select('*')
+          .eq('template_id', sessionData.mentor_id)
+          .single();
+        
+        if (!templateError) {
+          mentorTemplate = template;
+        }
+      } catch (error) {
+        console.log('Not a template mentor, using custom mentor data');
       }
       
-      // Format the mentor
+      // Format the mentor - either template or custom
       const mentor: MentorType = mentorTemplate ? {
         id: mentorTemplate.template_id,
         name: mentorTemplate.display_name,
@@ -356,6 +394,7 @@ export const MentorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       case 'creative': return 'from-pink-500 to-rose-700';
       case 'language': return 'from-blue-500 to-indigo-700';
       case 'education': return 'from-amber-500 to-orange-700';
+      case 'custom': return 'from-lime-500 to-lime-700';
       default: return 'from-gray-500 to-gray-700';
     }
   };
@@ -417,67 +456,6 @@ export const MentorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     
     return paths[category] || paths['technology'];
   };
-
-  // Fallback mentor templates (used while loading from database)
-  const mentors: MentorType[] = [
-    {
-      id: 'business-strategy',
-      name: 'Business Strategy Coach',
-      icon: '💼',
-      description: 'Develop your business acumen with guidance on strategy, planning, and execution from an experienced mentor.',
-      gradient: 'from-mentor-blue to-purple-600',
-      category: 'business',
-      expertise: 'Business Strategy',
-      learningPath: [
-        { name: 'Business Model Analysis' },
-        { name: 'Market Research' },
-        { name: 'Competitive Analysis' },
-        { name: 'Strategic Planning' },
-        { name: 'Financial Planning' },
-        { name: 'Operations Management' },
-        { name: 'Growth Strategy' },
-        { name: 'Risk Management' },
-      ],
-    },
-    {
-      id: 'digital-marketing',
-      name: 'Digital Marketing Mentor',
-      icon: '📊',
-      description: 'Learn digital marketing strategies from an expert mentor. Master SEO, social media, content marketing, and paid advertising.',
-      gradient: 'from-mentor-teal to-emerald-500',
-      category: 'business',
-      expertise: 'Digital Marketing',
-      learningPath: [
-        { name: 'Digital Marketing Fundamentals' },
-        { name: 'SEO Optimization' },
-        { name: 'Social Media Strategy' },
-        { name: 'Content Marketing' },
-        { name: 'Email Marketing' },
-        { name: 'Paid Advertising' },
-        { name: 'Analytics and Reporting' },
-        { name: 'Marketing Automation' },
-      ],
-    },
-    {
-      id: 'data-science',
-      name: 'Data Science Expert',
-      icon: '📈',
-      description: 'Learn data science from fundamentals to advanced topics with hands-on guidance and practical examples.',
-      gradient: 'from-mentor-purple to-pink-500',
-      category: 'technology',
-      expertise: 'Data Science',
-      learningPath: [
-        { name: 'Statistics Fundamentals' },
-        { name: 'Python Programming' },
-        { name: 'Data Analysis' },
-        { name: 'Machine Learning Basics' },
-        { name: 'Data Visualization' },
-        { name: 'Advanced ML Algorithms' },
-        { name: 'Big Data Technologies' },
-        { name: 'Project Implementation' },
-      ],
-    },
-  ];
 
   return (
     <MentorContext.Provider

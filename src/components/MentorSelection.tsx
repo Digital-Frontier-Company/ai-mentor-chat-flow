@@ -52,14 +52,17 @@ const MentorSelection: React.FC = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('mentor_templates')
-        .select('*');
+        .select('*')
+        .order('category');
       
       if (error) throw error;
+      
+      console.log("Fetched mentor templates:", data);
       
       // Transform the data to match our existing format
       return data.map((template: any) => ({
         id: template.template_id,
-        name: template.display_name,
+        name: template.display_name || template.default_mentor_name,
         icon: template.icon,
         description: template.description_for_user,
         gradient: getCategoryGradient(template.category),
@@ -247,6 +250,7 @@ const MentorSelection: React.FC = () => {
     }
   };
 
+  // Use fetched templates if available, otherwise use context templates
   const displayMentors = mentorTemplates || mentors;
   
   // Common emoji options for mentor icons
