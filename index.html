@@ -18,10 +18,71 @@
     <meta name="twitter:image" content="/lovable-uploads/bd0c9938-869e-417d-8441-834fe7445b8b.png" />
     
     <link rel="icon" href="/lovable-uploads/bd0c9938-869e-417d-8441-834fe7445b8b.png" type="image/png">
+    
+    <!-- Preload critical assets -->
+    <link rel="preload" href="/lovable-uploads/bd0c9938-869e-417d-8441-834fe7445b8b.png" as="image">
+    <link rel="preload" href="/lovable-uploads/75b303a0-d06c-44da-9531-3cfb842f4ba4.png" as="image">
+    
+    <!-- Critical CSS inlined for faster rendering -->
+    <style>
+      /* Basic styling for initial load */
+      body {
+        margin: 0;
+        padding: 0;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        background-color: #09090b;
+        color: #fff;
+      }
+      .initial-loader {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        flex-direction: column;
+      }
+      .spinner {
+        display: inline-block;
+        width: 50px;
+        height: 50px;
+        border: 4px solid #10b981;
+        border-radius: 50%;
+        border-right-color: transparent;
+        animation: spin 1s linear infinite;
+      }
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+      noscript {
+        display: block;
+        padding: 20px;
+        max-width: 600px;
+        margin: 50px auto;
+        background: #18181b;
+        border-radius: 8px;
+        text-align: center;
+      }
+    </style>
   </head>
 
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <!-- Initial content for SEO and no-JS users -->
+      <div class="initial-loader">
+        <div class="spinner"></div>
+        <p style="margin-top: 16px; color: #a1a1aa;">Loading MakeMentors.io...</p>
+      </div>
+    </div>
+    
+    <!-- No-JavaScript fallback -->
+    <noscript>
+      <div style="text-align: center;">
+        <img src="/lovable-uploads/bd0c9938-869e-417d-8441-834fe7445b8b.png" alt="MakeMentors.io Logo" style="height: 80px; margin-bottom: 20px;">
+        <h1>MakeMentors.io - Create Your AI Mentor</h1>
+        <p>Design your own AI mentors for personalized learning experiences.</p>
+        <p>This application requires JavaScript to be enabled. Please enable JavaScript in your browser settings to continue.</p>
+      </div>
+    </noscript>
+    
     <!-- IMPORTANT: DO NOT REMOVE THIS SCRIPT TAG OR THIS VERY COMMENT! -->
     <script src="https://cdn.gpteng.co/gptengineer.js" type="module"></script>
     <script type="module" src="/src/main.tsx"></script>

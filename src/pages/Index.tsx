@@ -7,9 +7,15 @@ import Logo from '@/components/ui/logo';
 import { Button } from '@/components/ui/button';
 import { HomeIcon, MessageCircle, Settings, LogOut } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import LoadingState from '@/components/mentor/LoadingState';
 
 const Index = () => {
-  const { user, signOut } = useAuth();
+  const { user, signOut, loading } = useAuth();
+  
+  // Show loading state while auth is being checked
+  if (loading) {
+    return <LoadingState message="Loading your dashboard..." withBackdrop={true} />;
+  }
   
   return (
     <div className="min-h-screen bg-zinc-950 text-white">
