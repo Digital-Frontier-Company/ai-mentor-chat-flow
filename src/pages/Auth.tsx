@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -21,7 +22,9 @@ const Auth: React.FC = () => {
 
   // Redirect if already authenticated
   useEffect(() => {
+    console.log("Auth page - User state:", user ? "logged in" : "not logged in");
     if (user) {
+      console.log("Auth page - User already authenticated, navigating to /app");
       navigate('/app');
     }
   }, [user, navigate]);
@@ -29,6 +32,7 @@ const Auth: React.FC = () => {
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      console.log("Auth page - Attempting sign in");
       setLoading(true);
       await signIn(email, password);
       // Navigation is handled in AuthContext after successful sign-in
