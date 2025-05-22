@@ -129,7 +129,17 @@ const Index = () => {
       
       <footer className="py-6 text-center text-sm text-zinc-500 border-t border-zinc-800" role="contentinfo">
         <div className="container">
-          <p>© {new Date().getFullYear()} MakeMentors.io. All rights reserved.</p>
+          <div className="flex flex-col items-center justify-center space-y-3">
+            <p>© {new Date().getFullYear()} MakeMentors.io. All rights reserved.</p>
+            <div className="flex items-center space-x-4">
+              <Link to="/legal/privacy" className="text-zinc-400 hover:text-lime-500 transition-colors">
+                Privacy Policy
+              </Link>
+              <Link to="/legal/terms" className="text-zinc-400 hover:text-lime-500 transition-colors">
+                Terms of Service
+              </Link>
+            </div>
+          </div>
         </div>
       </footer>
     </div>
