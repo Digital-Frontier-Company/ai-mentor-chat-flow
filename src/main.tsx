@@ -1,8 +1,11 @@
 
-import { StrictMode } from 'react';
+import { StrictMode, lazy, Suspense } from 'react';
 import { createRoot } from 'react-dom/client';
-import App from './App.tsx';
+import LoadingState from './components/mentor/LoadingState';
 import './index.css';
+
+// Implement code splitting with lazy loading
+const App = lazy(() => import('./App.tsx'));
 
 // Add a loading indicator that displays before React renders
 const rootElement = document.getElementById('root');
@@ -29,7 +32,9 @@ if (!rootElement) {
     const root = createRoot(rootElement);
     root.render(
       <StrictMode>
-        <App />
+        <Suspense fallback={<LoadingState message="Loading application..." withBackdrop={true} />}>
+          <App />
+        </Suspense>
       </StrictMode>
     );
     console.log('App successfully mounted');

@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, CheckCircle } from 'lucide-react';
@@ -7,6 +8,8 @@ import { supabase } from '@/integrations/supabase/client';
 import Logo from '@/components/ui/logo';
 import HomeHeader from '@/components/HomeHeader';
 import { useAuth } from '@/contexts/AuthContext';
+import MetaTags from '@/components/SEO/MetaTags';
+import OptimizedImage from '@/components/ui/optimized-image';
 
 // Type for mentor templates from our database
 interface MentorTemplate {
@@ -61,6 +64,14 @@ const Home: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-zinc-950 text-white">
+      {/* SEO Meta Tags */}
+      <MetaTags 
+        title="MakeMentors.io - Create Your AI Mentor"
+        description="Stop generic learning. With MakeMentors.io, you craft personalized AI mentors for any subject, skill, or goal. Tailored guidance, 24/7."
+        canonicalUrl="/"
+        keywords="AI mentor, personalized learning, artificial intelligence, education, skill development, custom mentor"
+      />
+      
       {/* Navigation */}
       <HomeHeader />
       
@@ -278,17 +289,18 @@ const Home: React.FC = () => {
           <div className="flex flex-col md:flex-row justify-between items-center mb-8">
             <Logo size="md" />
             <div className="mt-4 md:mt-0 flex space-x-6">
-              <Link to="#" className="hover:text-lime-400">About</Link>
-              <Link to="#" className="hover:text-lime-400">Templates</Link>
-              <Link to="#" className="hover:text-lime-400">Pricing</Link>
-              <Link to="#" className="hover:text-lime-400">Contact</Link>
+              <Link to="/" className="hover:text-lime-400">About</Link>
+              <Link to="/app" className="hover:text-lime-400">Templates</Link>
+              <Link to="/pricing" className="hover:text-lime-400">Pricing</Link>
+              <Link to="/legal/terms" className="hover:text-lime-400">Terms</Link>
+              <Link to="/legal/privacy" className="hover:text-lime-400">Privacy</Link>
             </div>
           </div>
           <div className="border-t border-zinc-800 pt-8 flex flex-col md:flex-row justify-between items-center">
             <p>© {new Date().getFullYear()} MakeMentors.io. All rights reserved.</p>
             <div className="mt-4 md:mt-0 flex space-x-6">
-              <Link to="#" className="hover:text-lime-400">Privacy</Link>
-              <Link to="#" className="hover:text-lime-400">Terms</Link>
+              <Link to="/legal/privacy" className="hover:text-lime-400">Privacy</Link>
+              <Link to="/legal/terms" className="hover:text-lime-400">Terms</Link>
             </div>
           </div>
         </div>

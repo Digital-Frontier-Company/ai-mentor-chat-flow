@@ -22,6 +22,8 @@
     <!-- Preload critical assets -->
     <link rel="preload" href="/lovable-uploads/bd0c9938-869e-417d-8441-834fe7445b8b.png" as="image">
     <link rel="preload" href="/lovable-uploads/75b303a0-d06c-44da-9531-3cfb842f4ba4.png" as="image">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     
     <!-- Critical CSS inlined for faster rendering -->
     <style>
@@ -67,19 +69,31 @@
   <body>
     <div id="root">
       <!-- Initial content for SEO and no-JS users -->
-      <div class="initial-loader">
-        <div class="spinner"></div>
+      <div class="initial-loader" role="status" aria-live="polite">
+        <div class="spinner" aria-hidden="true"></div>
         <p style="margin-top: 16px; color: #a1a1aa;">Loading MakeMentors.io...</p>
       </div>
     </div>
     
-    <!-- No-JavaScript fallback -->
+    <!-- No-JavaScript fallback with improved accessibility -->
     <noscript>
       <div style="text-align: center;">
         <img src="/lovable-uploads/bd0c9938-869e-417d-8441-834fe7445b8b.png" alt="MakeMentors.io Logo" style="height: 80px; margin-bottom: 20px;">
         <h1>MakeMentors.io - Create Your AI Mentor</h1>
-        <p>Design your own AI mentors for personalized learning experiences.</p>
-        <p>This application requires JavaScript to be enabled. Please enable JavaScript in your browser settings to continue.</p>
+        <h2>Design Your Own AI Mentors for Personalized Learning</h2>
+        <p>Stop generic learning. With MakeMentors.io, you craft personalized AI mentors for any subject, skill, or goal.</p>
+        <p>Our platform offers expert guidance tailored to your specific needs, available 24/7.</p>
+        <div style="margin: 30px auto; max-width: 600px; border: 1px solid #333; padding: 20px; border-radius: 8px;">
+          <h3>Key Features:</h3>
+          <ul style="text-align: left; list-style-type: none; padding-left: 0;">
+            <li style="margin: 10px 0;">✓ Create custom AI mentors for any subject</li>
+            <li style="margin: 10px 0;">✓ Get personalized guidance and feedback</li>
+            <li style="margin: 10px 0;">✓ Learn at your own pace with 24/7 availability</li>
+            <li style="margin: 10px 0;">✓ Choose from expert-designed templates or build from scratch</li>
+          </ul>
+        </div>
+        <p style="color: #ef4444;">This application requires JavaScript to be enabled. Please enable JavaScript in your browser settings to access the full interactive experience.</p>
+        <a href="mailto:support@makementors.io" style="color: #10b981; text-decoration: underline;">Contact Us</a>
       </div>
     </noscript>
     
