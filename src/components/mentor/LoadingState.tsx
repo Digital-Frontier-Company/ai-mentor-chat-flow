@@ -19,7 +19,7 @@ const LoadingState: React.FC<LoadingStateProps> = ({
   };
   
   const spinnerElement = (
-    <div className={`inline-block ${sizeClasses[size]} animate-spin rounded-full border-4 border-solid border-emerald-500 border-r-transparent`}></div>
+    <div className={`inline-block ${sizeClasses[size]} animate-spin rounded-full border-4 border-solid border-lime-500 border-r-transparent`}></div>
   );
   
   if (withBackdrop) {

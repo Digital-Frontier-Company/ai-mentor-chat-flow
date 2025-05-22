@@ -36,7 +36,7 @@ const UserMentorCard: React.FC<UserMentorCardProps> = ({ mentor, onSelect }) => 
         <div className="mt-auto pt-3">
           <Button 
             onClick={() => onSelect(mentor.id)}
-            className="w-full bg-lime-500 hover:bg-lime-600 text-black text-sm font-medium flex items-center justify-center gap-1.5 py-1.5 h-auto"
+            className="w-full text-sm font-medium flex items-center justify-center gap-1.5 py-1.5 h-auto"
           >
             Use Mentor
             <ArrowRightIcon size={14} />

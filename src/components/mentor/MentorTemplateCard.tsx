@@ -47,7 +47,7 @@ const MentorTemplateCard: React.FC<MentorTemplateCardProps> = ({ mentor, onSelec
         <div className="mt-auto pt-3">
           <Button 
             onClick={() => onSelect(mentor.id)}
-            className="w-full bg-emerald-500 hover:bg-emerald-600 text-black text-sm font-medium flex items-center justify-center gap-1.5 py-1.5 h-auto"
+            className="w-full text-sm font-medium flex items-center justify-center gap-1.5 py-1.5 h-auto"
           >
             Use Template
             <ArrowRightIcon size={14} />
