@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -32,6 +33,7 @@ export interface Message {
 interface MentorContextType {
   currentStep: 'select' | 'customize' | 'chat';
   mentors: MentorType[];
+  userMentors: MentorType[];
   selectedMentor: MentorType | null;
   userPreferences: UserPreferences;
   messages: Message[];
@@ -47,6 +49,8 @@ interface MentorContextType {
   userSessions: Array<{id: string, name: string, mentor_id: string}>;
   refreshUserSessions: () => Promise<void>;
   setChatSessionId: (id: string | null) => void;
+  createCustomMentor: (mentorData: { name: string, description: string, icon: string, color: string, customPrompt?: string }) => Promise<MentorType | null>;
+  loadUserMentors: () => Promise<void>;
 }
 
 export const MentorContext = createContext<MentorContextType | null>(null);
@@ -64,13 +68,15 @@ export const MentorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [isTyping, setIsTyping] = useState(false);
   const [chatSessionId, setChatSessionId] = useState<string | null>(null);
   const [userSessions, setUserSessions] = useState<Array<{id: string, name: string, mentor_id: string}>>([]);
+  const [userMentors, setUserMentors] = useState<MentorType[]>([]);
   const { user } = useAuth();
   const { toast } = useToast();
 
-  // Load user sessions on mount and when user changes
+  // Load user sessions and mentors on mount and when user changes
   useEffect(() => {
     if (user) {
       refreshUserSessions();
+      loadUserMentors();
     }
   }, [user]);
 
@@ -94,6 +100,122 @@ export const MentorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         description: "Failed to load your previous chat sessions",
         variant: "destructive",
       });
+    }
+  };
+
+  // Load mentors created by the user
+  const loadUserMentors = async () => {
+    if (!user) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('mentors')
+        .select('*')
+        .eq('user_id', user.id);
+        
+      if (error) throw error;
+      
+      if (data && data.length > 0) {
+        // Transform to MentorType format
+        const transformedMentors = data.map(mentor => ({
+          id: mentor.id,
+          name: mentor.name,
+          icon: mentor.icon || '🧠',
+          description: mentor.description,
+          gradient: getCategoryGradient('custom'), // Custom gradient for user mentors
+          category: 'custom',
+          expertise: mentor.name,
+          learningPath: [], // Empty learning path for custom mentors
+        }));
+        
+        setUserMentors(transformedMentors);
+      }
+    } catch (error) {
+      console.error('Error loading user mentors:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load your custom mentors",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Create a custom mentor
+  const createCustomMentor = async (mentorData: { 
+    name: string, 
+    description: string, 
+    icon: string, 
+    color: string,
+    customPrompt?: string 
+  }): Promise<MentorType | null> => {
+    if (!user) {
+      toast({
+        title: "Authentication required",
+        description: "Please sign in to create a custom mentor",
+        variant: "destructive",
+      });
+      return null;
+    }
+    
+    try {
+      // Call our edge function to create the mentor
+      const response = await fetch('https://bapditcjlxctrisoixpg.supabase.co/functions/v1/create-mentor', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
+        },
+        body: JSON.stringify({
+          name: mentorData.name,
+          description: mentorData.description,
+          icon: mentorData.icon,
+          color: mentorData.color,
+          customPrompt: mentorData.customPrompt,
+          userId: user.id
+        })
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create mentor');
+      }
+      
+      const { mentor } = await response.json();
+      
+      if (!mentor) {
+        throw new Error('No mentor data returned');
+      }
+      
+      // Format the mentor to match our MentorType
+      const newMentor: MentorType = {
+        id: mentor.id,
+        name: mentor.name,
+        icon: mentor.icon || '🧠',
+        description: mentor.description,
+        gradient: getCategoryGradient('custom'),
+        category: 'custom',
+        expertise: mentor.name,
+        learningPath: [],
+      };
+      
+      // Add to our userMentors state
+      setUserMentors(prev => [...prev, newMentor]);
+      
+      toast({
+        title: "Success!",
+        description: "Your custom mentor has been created",
+        variant: "default",
+      });
+      
+      return newMentor;
+    } catch (error) {
+      console.error('Error creating custom mentor:', error);
+      toast({
+        title: "Failed to create mentor",
+        description: error instanceof Error ? error.message : 'An unexpected error occurred',
+        variant: "destructive",
+      });
+      return null;
     }
   };
 
@@ -362,6 +484,7 @@ export const MentorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       value={{
         currentStep,
         mentors,
+        userMentors,
         selectedMentor,
         userPreferences,
         messages,
@@ -377,6 +500,8 @@ export const MentorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         userSessions,
         refreshUserSessions,
         setChatSessionId,
+        createCustomMentor,
+        loadUserMentors,
       }}
     >
       {children}

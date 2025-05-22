@@ -88,6 +88,13 @@ export const getMentorResponse = async (
     // Get current session token
     const accessToken = sessionData?.session?.access_token || '';
 
+    console.log("Sending chat request to edge function:", {
+      messages: apiMessages.length,
+      mentorId: mentor.id,
+      userId: user?.id,
+      userPreferences
+    });
+
     // Call our edge function with streaming enabled
     const response = await fetch(functionUrl, {
       method: 'POST',
@@ -106,6 +113,7 @@ export const getMentorResponse = async (
 
     if (!response.ok) {
       const errorText = await response.text();
+      console.error("Error response from edge function:", errorText);
       throw new Error(`Error from edge function: ${errorText}`);
     }
 

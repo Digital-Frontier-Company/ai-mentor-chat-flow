@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useMentor } from '@/contexts/MentorContext';
 import MentorSelection from './MentorSelection';
 import CustomizationForm from './CustomizationForm';
@@ -11,9 +11,16 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
 const MentorApp: React.FC = () => {
-  const { currentStep, setCurrentStep, selectedMentor } = useMentor();
+  const { currentStep, setCurrentStep, selectedMentor, loadUserMentors } = useMentor();
   const { user } = useAuth();
   const navigate = useNavigate();
+  
+  // Load user mentors when the component mounts
+  useEffect(() => {
+    if (user) {
+      loadUserMentors();
+    }
+  }, [user]);
   
   const handleNewChat = () => {
     setCurrentStep('select');
@@ -58,7 +65,7 @@ const MentorApp: React.FC = () => {
           
           {/* Mentor templates section - 8 columns on larger screens */}
           <div className="lg:col-span-8">
-            <h2 className="text-xl font-semibold mb-3">Choose a Mentor Template</h2>
+            <h2 className="text-xl font-semibold mb-3">Choose a Mentor</h2>
             <MentorSelection />
           </div>
         </div>
