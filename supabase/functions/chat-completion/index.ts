@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
 
@@ -43,21 +44,20 @@ serve(async (req) => {
       throw new Error("Mentor ID and messages array are required");
     }
     
-    // Get mentor information
+    // Get mentor information - first try custom mentors table
+    let mentorPrompt = "";
+    let mentorName = "";
+    let mentorType = "custom";
+    
     const { data: mentor, error: mentorError } = await supabase
       .from("mentors")
       .select("name, description, avatar_url")
       .eq("id", mentorId)
       .single();
     
-    if (mentorError && !mentorError.message.includes("No rows found")) {
-      console.error("Error fetching mentor:", mentorError);
-    }
-
-    // If mentor not found in mentors table, check mentor_templates table
-    let mentorPrompt = "";
-    let mentorName = "";
-    if (!mentor) {
+    // If not found in mentors table, check mentor_templates
+    if (mentorError && mentorError.message.includes("No rows found")) {
+      mentorType = "template";
       const { data: template, error: templateError } = await supabase
         .from("mentor_templates")
         .select("*")
@@ -73,7 +73,7 @@ serve(async (req) => {
           `You are a ${template.display_name}. ${template.description_for_user}`;
         mentorName = template.display_name;
       }
-    } else {
+    } else if (mentor) {
       mentorPrompt = `You are ${mentor.name}. ${mentor.description}`;
       mentorName = mentor.name;
     }
@@ -93,6 +93,7 @@ serve(async (req) => {
           .from("chat_sessions")
           .insert({
             mentor_id: mentorId,
+            mentor_type: mentorType,  // Store whether this is a template or custom mentor
             user_id: userId,
             name: `Chat with ${mentorName || 'Mentor'}`
           })

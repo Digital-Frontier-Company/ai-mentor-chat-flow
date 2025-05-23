@@ -47,15 +47,44 @@ serve(async (req) => {
       throw new Error("Mentor ID and messages array are required");
     }
     
-    // Get mentor information
-    const { data: mentor, error: mentorError } = await supabase
+    // Determine if this is a template mentor or custom mentor
+    let mentorType = "custom";
+    let mentor;
+    
+    // First try to get the mentor from the mentors table
+    const { data: customMentor, error: customMentorError } = await supabase
       .from("mentors")
-      .select("name, description")  // Removed system_prompt as it doesn't exist
+      .select("name, description")
       .eq("id", mentorId)
       .single();
     
-    if (mentorError) {
-      throw new Error(`Error fetching mentor: ${mentorError.message}`);
+    if (customMentorError) {
+      if (!customMentorError.message.includes("No rows found")) {
+        console.error("Error fetching custom mentor:", customMentorError);
+      }
+      
+      // If not found in mentors table, check mentor_templates
+      mentorType = "template";
+      const { data: templateMentor, error: templateMentorError } = await supabase
+        .from("mentor_templates")
+        .select("display_name, description_for_user")
+        .eq("template_id", mentorId)
+        .single();
+      
+      if (templateMentorError) {
+        throw new Error(`Error fetching mentor template: ${templateMentorError.message}`);
+      }
+      
+      if (!templateMentor) {
+        throw new Error(`Mentor template not found for ID: ${mentorId}`);
+      }
+      
+      mentor = {
+        name: templateMentor.display_name,
+        description: templateMentor.description_for_user,
+      };
+    } else {
+      mentor = customMentor;
     }
     
     if (!mentor) {
@@ -71,6 +100,7 @@ serve(async (req) => {
           .from("chat_sessions")
           .insert({
             mentor_id: mentorId,
+            mentor_type: mentorType,
             user_id: userId,
             name: `Chat with ${mentor.name}`, // Default name based on mentor
           })

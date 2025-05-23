@@ -3,6 +3,7 @@ import React from 'react';
 import { useMentor } from '@/contexts/MentorContext';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { MessageCircle, Plus, ArrowRight } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
@@ -71,9 +72,14 @@ const ChatSessionsList: React.FC<ChatSessionsListProps> = ({ onNewChat }) => {
                 <div className="flex items-center justify-between">
                   <div>
                     <h3 className="text-sm font-medium line-clamp-1">{session.name}</h3>
-                    <p className="text-xs text-zinc-400 line-clamp-1">
-                      Mentor ID: {session.mentor_id}
-                    </p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Badge variant={session.mentor_type === 'custom' ? 'destructive' : 'outline'} className="text-xs px-1 py-0">
+                        {session.mentor_type === 'custom' ? 'Custom' : 'Template'}
+                      </Badge>
+                      <p className="text-xs text-zinc-400 line-clamp-1">
+                        ID: {session.mentor_id.substring(0, 8)}...
+                      </p>
+                    </div>
                   </div>
                   <Button 
                     variant="default" 

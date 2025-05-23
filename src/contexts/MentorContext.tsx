@@ -120,7 +120,7 @@ export const MentorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     try {
       const { data, error } = await supabase
         .from('chat_sessions')
-        .select('id, name, mentor_id')
+        .select('id, name, mentor_id, mentor_type')
         .eq('user_id', user.id)
         .order('updated_at', { ascending: false });
       
@@ -275,42 +275,73 @@ export const MentorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       
       if (messagesError) throw messagesError;
       
-      // Try to get the mentor template if it's a template-based mentor
-      let mentorTemplate = null;
-      try {
+      // Determine mentor type and get the appropriate mentor data
+      let mentor: MentorType;
+      
+      // Check if this is a template mentor
+      if (sessionData.mentor_type === 'template' || !sessionData.mentor_type) {
+        // Try to get the mentor template
         const { data: template, error: templateError } = await supabase
           .from('mentor_templates')
           .select('*')
           .eq('template_id', sessionData.mentor_id)
           .single();
         
-        if (!templateError) {
-          mentorTemplate = template;
+        if (templateError && !templateError.message.includes("No rows found")) {
+          console.error('Error loading template mentor:', templateError);
         }
-      } catch (error) {
-        console.log('Not a template mentor, using custom mentor data');
+        
+        if (template) {
+          mentor = {
+            id: template.template_id,
+            name: template.display_name,
+            icon: template.icon,
+            description: template.description_for_user,
+            gradient: getCategoryGradient(template.category),
+            category: template.category,
+            expertise: template.default_mentor_name,
+            learningPath: generateLearningPath(template.category),
+          };
+        } else {
+          // Fallback if template not found
+          mentor = {
+            id: sessionData.mentor_id,
+            name: sessionData.name || 'Unknown Mentor',
+            icon: '🤖',
+            description: 'Description not available',
+            gradient: 'from-gray-500 to-gray-700',
+            category: 'unknown',
+            expertise: 'Unknown',
+            learningPath: [],
+          };
+        }
+      } else {
+        // This is a custom mentor
+        if (sessionData.mentors) {
+          mentor = {
+            id: sessionData.mentor_id,
+            name: sessionData.mentors.name,
+            icon: sessionData.mentors.avatar_url || '🤖',
+            description: sessionData.mentors.description,
+            gradient: getCategoryGradient('custom'),
+            category: 'custom',
+            expertise: sessionData.mentors.name,
+            learningPath: [],
+          };
+        } else {
+          // Fallback if mentor not found
+          mentor = {
+            id: sessionData.mentor_id,
+            name: sessionData.name?.replace('Chat with ', '') || 'Custom Mentor',
+            icon: '🤖',
+            description: 'Custom mentor',
+            gradient: getCategoryGradient('custom'),
+            category: 'custom',
+            expertise: 'Custom expertise',
+            learningPath: [],
+          };
+        }
       }
-      
-      // Format the mentor - either template or custom
-      const mentor: MentorType = mentorTemplate ? {
-        id: mentorTemplate.template_id,
-        name: mentorTemplate.display_name,
-        icon: mentorTemplate.icon,
-        description: mentorTemplate.description_for_user,
-        gradient: getCategoryGradient(mentorTemplate.category),
-        category: mentorTemplate.category,
-        expertise: mentorTemplate.default_mentor_name,
-        learningPath: generateLearningPath(mentorTemplate.category),
-      } : {
-        id: sessionData.mentor_id,
-        name: sessionData.mentors.name,
-        icon: sessionData.mentors.avatar_url || '🤖', // Use avatar_url or default icon
-        description: sessionData.mentors.description,
-        gradient: 'from-mentor-blue to-purple-600',
-        category: 'custom',
-        expertise: sessionData.mentors.name,
-        learningPath: [],
-      };
       
       // Format messages
       const formattedMessages = messagesData ? messagesData.map((msg) => ({
