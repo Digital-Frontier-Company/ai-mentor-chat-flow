@@ -1,0 +1,81 @@
+
+name: Performance Testing
+
+on:
+  schedule:
+    # Run weekly on Monday at 1:00 UTC
+    - cron: '0 1 * * 1'
+  workflow_dispatch: # Allow manual triggering
+
+jobs:
+  lighthouse:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Use Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Build
+        run: npm run build
+        
+      - name: Start server
+        run: npx serve -s dist &
+        
+      - name: Wait for server
+        run: |
+          echo "Waiting for server to start..."
+          sleep 5
+          
+      - name: Run Lighthouse CI
+        uses: treosh/lighthouse-ci-action@v9
+        with:
+          urls: |
+            http://localhost:3000/
+            http://localhost:3000/auth
+          uploadArtifacts: true
+          temporaryPublicStorage: true
+          
+      - name: Format lighthouse score
+        if: always()
+        run: |
+          echo "### Lighthouse Scores" >> $GITHUB_STEP_SUMMARY
+          echo "| Page | Performance | Accessibility | Best Practices | SEO |" >> $GITHUB_STEP_SUMMARY
+          echo "| ---- | ----------- | ------------- | -------------- | --- |" >> $GITHUB_STEP_SUMMARY
+          
+          # Handle scores for each URL tested
+          cat .lighthouseci/manifest.json | jq -r '.[] | "| \(.url) | \(.summary.performance*100 | floor)% | \(.summary.accessibility*100 | floor)% | \(.summary.\"best-practices\"*100 | floor)% | \(.summary.seo*100 | floor)% |"' >> $GITHUB_STEP_SUMMARY
+
+  bundle-analysis:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Use Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Build with source maps
+        run: npm run build
+        
+      - name: Analyze bundle size
+        run: |
+          npx source-map-explorer dist/assets/*.js --html bundle-analysis.html
+          npx source-map-explorer dist/assets/*.css --html css-analysis.html
+          
+      - name: Upload bundle analysis
+        uses: actions/upload-artifact@v3
+        with:
+          name: bundle-analysis-reports
+          path: |
+            bundle-analysis.html
+            css-analysis.html
