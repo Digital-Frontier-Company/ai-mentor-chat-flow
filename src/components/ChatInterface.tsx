@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { useMentor } from '@/contexts/MentorContext';
 import { Button } from '@/components/ui/button';
@@ -170,6 +169,15 @@ const ChatInterface: React.FC = () => {
         console.log("Selected mentor:", selectedMentor);
         console.log("Mentor ID:", selectedMentor.id);
         console.log("User ID:", user.id);
+        
+        // Add the requested debug info
+        console.log("Debug info:", {
+          selectedMentor,
+          user,
+          mentorId: selectedMentor.id,
+          userId: user.id,
+          mentorType: typeof selectedMentor.id
+        });
         
         try {
           const { data: session, error } = await supabase
