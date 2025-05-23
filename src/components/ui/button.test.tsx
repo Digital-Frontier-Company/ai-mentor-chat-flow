@@ -12,7 +12,7 @@ describe('Button component', () => {
   it('applies default variant class', () => {
     render(<Button>Default Button</Button>);
     const button = screen.getByRole('button');
-    expect(button).toHaveClass('bg-primary');
+    expect(button).toHaveClass('bg-lime-500');
   });
 
   it('applies different variants', () => {
