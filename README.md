@@ -33,35 +33,19 @@ cd <YOUR_PROJECT_NAME>
 # Step 3: Install the necessary dependencies.
 npm i
 
-# Step 4: Create a .env file based on .env.example
-cp .env.example .env
-# Then edit the .env file with your actual credentials
-
-# Step 5: Start the development server with auto-reloading and an instant preview.
+# Step 4: Start the development server with auto-reloading and an instant preview.
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+## Configuration
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+This project uses a centralized configuration approach with the main configuration file at `src/config/index.ts`. 
+This allows for consistent configuration across both client-side code and serverless edge functions.
 
-**Use GitHub Codespaces**
-
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## Environment Variables
-
-This project uses environment variables for configuration. Follow these steps to set them up:
-
-1. Copy the `.env.example` file to `.env`: `cp .env.example .env`
-2. Edit the `.env` file with your actual values
-3. **IMPORTANT**: Never commit the `.env` file with real secrets to the repository
+If you prefer using environment variables:
+1. Modify the config file to read from environment variables
+2. Create a local `.env` file based on `.env.example`
+3. Add your actual credentials to the `.env` file
 
 ## Security Best Practices
 
@@ -91,3 +75,4 @@ Yes it is!
 To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
 
 Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+
