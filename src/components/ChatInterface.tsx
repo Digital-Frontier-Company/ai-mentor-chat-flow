@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { useMentor } from '@/contexts/MentorContext';
 import { Button } from '@/components/ui/button';
@@ -57,11 +58,15 @@ const ChatInterface: React.FC = () => {
           try {
             console.log("Creating new chat session for existing messages");
             
+            // Determine mentor type
+            const mentorType = selectedMentor.category === 'custom' ? 'custom' : 'template';
+            
             // Create a new chat session
             const { data: session, error } = await supabase
               .from('chat_sessions')
               .insert({
                 mentor_id: selectedMentor.id,
+                mentor_type: mentorType,
                 user_id: user.id,
                 name: `Chat with ${selectedMentor.name}`
               })
@@ -180,10 +185,14 @@ const ChatInterface: React.FC = () => {
         });
         
         try {
+          // Determine mentor type based on category
+          const mentorType = selectedMentor.category === 'custom' ? 'custom' : 'template';
+          
           const { data: session, error } = await supabase
             .from('chat_sessions')
             .insert({
-              mentor_id: selectedMentor.id, // This should work for both templates and custom mentors
+              mentor_id: selectedMentor.id,
+              mentor_type: mentorType,
               user_id: user.id,
               name: `Chat with ${selectedMentor.name}`
             })
