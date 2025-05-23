@@ -28,12 +28,15 @@ export const simulateStreamingResponse = (
   const delay = 20; // Milliseconds between each character
   const text = message;
 
+  console.log("Starting to simulate streaming...");
+  
   const interval = setInterval(() => {
     if (charIndex < text.length) {
       onProgress(text.substring(0, charIndex + 1));
       charIndex++;
     } else {
       clearInterval(interval);
+      console.log("Simulated streaming complete");
       onComplete();
     }
   }, delay);
@@ -70,6 +73,9 @@ export const getMentorResponse = async (
   chatSessionId?: string | null
 ) => {
   try {
+    console.log("Starting to stream...");
+    console.log("Message received:", userMessage);
+    
     // Format messages for the API
     const apiMessages = buildMessages(previousMessages, userPreferences, mentor);
     
@@ -146,7 +152,8 @@ export const getMentorResponse = async (
             const { done, value } = await reader.read();
             
             if (done) {
-              console.log("Stream completed, calling onComplete with session ID:", responseChatSessionId);
+              console.log("Stream completed, final text length:", fullText.length);
+              console.log("Calling onComplete with session ID:", responseChatSessionId);
               onComplete(responseChatSessionId || undefined);
               break;
             }
@@ -160,22 +167,24 @@ export const getMentorResponse = async (
             for (const line of lines) {
               const data = line.replace(/^data: /, '').trim();
               
-              const { content, done } = parseOpenAIStreamData(data);
+              const { content, done: lineIsDone } = parseOpenAIStreamData(data);
               
               if (content) {
                 fullText += content;
-                onProgress(fullText);
+                onProgress(fullText); // Always pass the full accumulated text
               }
               
-              if (done) {
-                console.log("Stream marked as done, calling onComplete with session ID:", responseChatSessionId);
+              if (lineIsDone) {
+                console.log("Stream marked as done via data, final text length:", fullText.length);
+                console.log("Calling onComplete with session ID:", responseChatSessionId);
                 onComplete(responseChatSessionId || undefined);
-                return;
+                return; // Exit the function completely
               }
             }
           }
         } catch (error) {
           console.error('Error processing stream:', error);
+          // Still call onComplete even if there's an error, but with whatever we accumulated
           onComplete(responseChatSessionId || undefined);
         }
       };
@@ -201,6 +210,8 @@ export const getMentorResponse = async (
       const sessionId = data.sessionId || responseChatSessionId;
       
       console.log("Received non-streaming response, session ID:", sessionId);
+      console.log("Message received:", aiResponse.substring(0, 50) + "...");
+      console.log("Saving message...");
       
       // Fall back to simulated streaming
       return simulateStreamingResponse(
@@ -216,6 +227,7 @@ export const getMentorResponse = async (
     console.error('Error in getMentorResponse:', error);
     
     // Fall back to simulation with error message
+    console.log("Error occurred, falling back to error message");
     return simulateStreamingResponse(
       "I'm sorry, I encountered an error while processing your request. Please try again later.",
       onProgress,
