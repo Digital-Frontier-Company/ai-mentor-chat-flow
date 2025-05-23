@@ -167,18 +167,25 @@ const ChatInterface: React.FC = () => {
       // If we don't have a session ID, create one now
       if (!currentSessionId && user) {
         console.log("Creating chat session before sending message");
+        console.log("Selected mentor:", selectedMentor);
+        console.log("Mentor ID:", selectedMentor.id);
+        console.log("User ID:", user.id);
+        
         try {
           const { data: session, error } = await supabase
             .from('chat_sessions')
             .insert({
-              mentor_id: selectedMentor.id,
+              mentor_id: selectedMentor.id, // This should work for both templates and custom mentors
               user_id: user.id,
               name: `Chat with ${selectedMentor.name}`
             })
             .select()
             .single();
           
-          if (error) throw error;
+          if (error) {
+            console.error("Session creation error details:", error);
+            throw error;
+          }
           
           currentSessionId = session.id;
           setChatSessionId(session.id);
@@ -216,6 +223,12 @@ const ChatInterface: React.FC = () => {
           
         } catch (sessionError) {
           console.error('Error creating chat session:', sessionError);
+          console.error('Session error details:', {
+            message: sessionError.message,
+            details: sessionError.details,
+            hint: sessionError.hint,
+            code: sessionError.code
+          });
           // Continue without session - this will work but won't save
           console.log("Continuing without database persistence");
         }

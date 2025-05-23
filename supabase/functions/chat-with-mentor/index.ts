@@ -50,7 +50,7 @@ serve(async (req) => {
     // Get mentor information
     const { data: mentor, error: mentorError } = await supabase
       .from("mentors")
-      .select("name, description, system_prompt")
+      .select("name, description")  // Removed system_prompt as it doesn't exist
       .eq("id", mentorId)
       .single();
     
@@ -135,7 +135,7 @@ serve(async (req) => {
     }
     
     // Build system prompt
-    const systemPrompt = mentor.system_prompt || 
+    const systemPrompt = 
       `You are ${mentor.name}, a mentor with the following expertise: ${mentor.description}. Your goal is to help users by providing guidance, answering questions, and offering advice in your area of expertise.`;
     
     // Build the conversation history
