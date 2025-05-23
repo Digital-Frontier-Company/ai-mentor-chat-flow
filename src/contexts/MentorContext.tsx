@@ -128,19 +128,14 @@ export const MentorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     try {
       const { data, error } = await supabase
         .from('chat_sessions')
-        .select('id, name, mentor_id')
+        .select('id, name, mentor_id, mentor_type')
         .eq('user_id', user.id)
         .order('updated_at', { ascending: false });
       
       if (error) throw error;
       
-      // Since mentor_type might not exist in the table yet, create it here
-      const sessionsWithType = data ? data.map((session: any) => ({
-        id: session.id,
-        name: session.name,
-        mentor_id: session.mentor_id,
-        mentor_type: session.mentor_type || 'template' // Default to 'template' if null
-      })) : [];
+      // The mentor_type column now exists in the database
+      const sessionsWithType = data || [];
       
       setUserSessions(sessionsWithType);
     } catch (error) {
@@ -292,16 +287,16 @@ export const MentorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       
       if (messagesError) throw messagesError;
       
-      // Determine mentor type and get the appropriate mentor data
-      let mentor: MentorType;
+      // Use mentor_type from the database, with fallback to inference if needed
+      let mentorType = sessionData.mentor_type || 'template';
       
-      // Check if session has mentor_type, if not, infer it
-      let mentorType = 'template'; // Default
-      
-      // Try to infer mentor type if not present in data
-      if (await isMentorCustom(sessionData.mentor_id)) {
+      // If still null or undefined, try to infer
+      if (!mentorType && await isMentorCustom(sessionData.mentor_id)) {
         mentorType = 'custom';
       }
+      
+      // Determine mentor data based on mentor type
+      let mentor: MentorType;
       
       // Check if this is a template mentor
       if (mentorType === 'template') {

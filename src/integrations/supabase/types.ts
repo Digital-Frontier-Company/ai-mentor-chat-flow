@@ -41,6 +41,7 @@ export type Database = {
           created_at: string
           id: string
           mentor_id: string
+          mentor_type: string | null
           name: string | null
           updated_at: string
           user_id: string | null
@@ -49,6 +50,7 @@ export type Database = {
           created_at?: string
           id?: string
           mentor_id: string
+          mentor_type?: string | null
           name?: string | null
           updated_at?: string
           user_id?: string | null
@@ -57,6 +59,7 @@ export type Database = {
           created_at?: string
           id?: string
           mentor_id?: string
+          mentor_type?: string | null
           name?: string | null
           updated_at?: string
           user_id?: string | null
