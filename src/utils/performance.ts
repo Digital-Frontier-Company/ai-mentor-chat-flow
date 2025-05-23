@@ -3,6 +3,16 @@
  * Performance utility functions for production optimization
  */
 
+// Extending Navigator interface to include connection property
+interface NetworkInformation {
+  effectiveType: string;
+  saveData: boolean;
+}
+
+interface NavigatorWithConnection extends Navigator {
+  connection?: NetworkInformation;
+}
+
 // Debounce function to limit how often a function can be called
 export function debounce<T extends (...args: any[]) => any>(
   fn: T,
@@ -64,11 +74,11 @@ export function preloadAssets(urls: string[]): void {
 
 // Detect slow network connections
 export function isSlowConnection(): boolean {
-  if (navigator.connection) {
-    const connection = (navigator as any).connection;
-    return connection.saveData || 
-           connection.effectiveType === 'slow-2g' || 
-           connection.effectiveType === '2g';
+  const nav = navigator as NavigatorWithConnection;
+  if (nav.connection) {
+    return nav.connection.saveData || 
+           nav.connection.effectiveType === 'slow-2g' || 
+           nav.connection.effectiveType === '2g';
   }
   return false;
 }
