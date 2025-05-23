@@ -29,6 +29,14 @@ export interface Message {
   content: string;
 }
 
+// Update the interface to include mentor_type
+interface ChatSession {
+  id: string;
+  name: string;
+  mentor_id: string;
+  mentor_type: string;
+}
+
 interface MentorContextType {
   currentStep: 'select' | 'customize' | 'chat';
   mentors: MentorType[];
@@ -45,7 +53,7 @@ interface MentorContextType {
   setIsTyping: (isTyping: boolean) => void;
   resetChat: () => void;
   loadChatSession: (sessionId: string) => Promise<boolean>;
-  userSessions: Array<{id: string, name: string, mentor_id: string}>;
+  userSessions: ChatSession[];
   refreshUserSessions: () => Promise<void>;
   setChatSessionId: (id: string | null) => void;
   createCustomMentor: (mentorData: { name: string, description: string, icon: string, color: string, customPrompt?: string }) => Promise<MentorType | null>;
@@ -66,7 +74,7 @@ export const MentorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [messages, setMessages] = useState<Message[]>([]);
   const [isTyping, setIsTyping] = useState(false);
   const [chatSessionId, setChatSessionId] = useState<string | null>(null);
-  const [userSessions, setUserSessions] = useState<Array<{id: string, name: string, mentor_id: string}>>([]);
+  const [userSessions, setUserSessions] = useState<ChatSession[]>([]);
   const [userMentors, setUserMentors] = useState<MentorType[]>([]);
   const [mentors, setMentors] = useState<MentorType[]>([]);
   const { user } = useAuth();

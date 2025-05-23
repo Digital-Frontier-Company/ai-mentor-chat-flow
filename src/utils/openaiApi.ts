@@ -1,4 +1,3 @@
-
 import { UserPreferences, MentorType, Message } from '@/contexts/MentorContext';
 import { supabase } from "@/integrations/supabase/client";
 
@@ -122,8 +121,8 @@ export const getMentorResponse = async (
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("Error response from edge function:", errorText);
-      throw new Error(`Error from edge function: ${errorText}`);
+      console.error("Error response from edge function:", response.status, errorText);
+      throw new Error(`Error from edge function (${response.status}): ${errorText}`);
     }
 
     // Extract the chat session ID from headers if available
