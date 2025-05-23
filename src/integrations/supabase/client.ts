@@ -1,3 +1,4 @@
+
 import { createClient } from '@supabase/supabase-js'
 
 // Only use the anon key in client-side code
