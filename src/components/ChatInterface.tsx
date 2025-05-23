@@ -80,6 +80,7 @@ const ChatInterface: React.FC = () => {
             // Add existing welcome message to the database
             const welcomeMessage = messages.find(msg => msg.role === 'assistant');
             if (welcomeMessage) {
+              console.log("Saving welcome message to database...");
               const { error: msgError } = await supabase
                 .from('chat_messages')
                 .insert({
@@ -157,8 +158,12 @@ const ChatInterface: React.FC = () => {
       setStreamCleanup(null);
     }
 
+    // Store the accumulated response text
+    let accumulatedResponse = '';
+
     try {
       console.log("Sending message with session ID:", chatSessionId);
+      console.log("Message content:", userInput.trim());
       
       // Get and stream response
       const cleanup = await getMentorResponse(
@@ -167,14 +172,21 @@ const ChatInterface: React.FC = () => {
         userPreferences,
         selectedMentor,
         (text) => {
+          // Update both state and our local variable
+          accumulatedResponse = text;
           setCurrentResponse(text);
         },
         (sessionId) => {
           // When streaming complete
           console.log("Stream complete, session ID:", sessionId);
+          console.log("Final accumulated response length:", accumulatedResponse.length);
           
-          if (currentResponse) {
-            addMessage(currentResponse, 'assistant');
+          // Use the accumulated response instead of state
+          if (accumulatedResponse.trim()) {
+            console.log("Saving assistant response to state:", accumulatedResponse.substring(0, 50) + "...");
+            addMessage(accumulatedResponse, 'assistant');
+          } else {
+            console.warn("No response content to save");
           }
           
           // Update the chat session ID if it was returned
