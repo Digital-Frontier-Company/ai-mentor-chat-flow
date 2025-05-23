@@ -25,6 +25,7 @@ enabled = true
 [realtime]
 enabled = true
 
+# Ensure all functions use JWT verification for security
 [functions]
 [functions.create-mentor]
 verify_jwt = true

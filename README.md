@@ -1,3 +1,4 @@
+
 # Welcome to your Lovable project
 
 ## Project info
@@ -32,7 +33,11 @@ cd <YOUR_PROJECT_NAME>
 # Step 3: Install the necessary dependencies.
 npm i
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+# Step 4: Create a .env file based on .env.example
+cp .env.example .env
+# Then edit the .env file with your actual credentials
+
+# Step 5: Start the development server with auto-reloading and an instant preview.
 npm run dev
 ```
 
@@ -49,6 +54,21 @@ npm run dev
 - Select the "Codespaces" tab.
 - Click on "New codespace" to launch a new Codespace environment.
 - Edit files directly within the Codespace and commit and push your changes once you're done.
+
+## Environment Variables
+
+This project uses environment variables for configuration. Follow these steps to set them up:
+
+1. Copy the `.env.example` file to `.env`: `cp .env.example .env`
+2. Edit the `.env` file with your actual values
+3. **IMPORTANT**: Never commit the `.env` file with real secrets to the repository
+
+## Security Best Practices
+
+- Only use the anon key in the client-side code
+- Keep the service role key restricted to server-side edge functions
+- Always enable Row Level Security (RLS) on Supabase tables
+- Use policies to control data access at the row level
 
 ## What technologies are used for this project?
 
