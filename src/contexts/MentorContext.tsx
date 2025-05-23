@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -133,7 +134,14 @@ export const MentorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         .order('updated_at', { ascending: false });
       
       if (error) throw error;
-      setUserSessions(data || []);
+      
+      // Make sure we handle the case where mentor_type might be null in some records
+      const sessionsWithType = data ? data.map(session => ({
+        ...session,
+        mentor_type: session.mentor_type || 'template' // Default to 'template' if null
+      })) : [];
+      
+      setUserSessions(sessionsWithType);
     } catch (error) {
       console.error('Error loading user sessions:', error);
       toast({
@@ -286,8 +294,12 @@ export const MentorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       // Determine mentor type and get the appropriate mentor data
       let mentor: MentorType;
       
+      // Use the mentor_type field if it exists, otherwise infer from the mentor_id
+      const mentorType = sessionData.mentor_type || 
+        (await isMentorCustom(sessionData.mentor_id) ? 'custom' : 'template');
+      
       // Check if this is a template mentor
-      if (sessionData.mentor_type === 'template' || !sessionData.mentor_type) {
+      if (mentorType === 'template') {
         // Try to get the mentor template
         const { data: template, error: templateError } = await supabase
           .from('mentor_templates')
@@ -372,6 +384,24 @@ export const MentorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         description: "Failed to load the chat session",
         variant: "destructive",
       });
+      return false;
+    }
+  };
+
+  // Helper function to check if a mentor is custom
+  const isMentorCustom = async (mentorId: string): Promise<boolean> => {
+    try {
+      const { data, error } = await supabase
+        .from('mentors')
+        .select('id')
+        .eq('id', mentorId)
+        .single();
+      
+      if (error || !data) {
+        return false;
+      }
+      return true;
+    } catch (error) {
       return false;
     }
   };
