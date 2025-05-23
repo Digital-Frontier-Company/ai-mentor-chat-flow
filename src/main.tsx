@@ -1,57 +1,46 @@
 
-import { StrictMode, lazy, Suspense } from 'react';
-import { createRoot } from 'react-dom/client';
-import LoadingState from './components/mentor/LoadingState';
+import React, { Suspense } from 'react';
+import ReactDOM from 'react-dom/client';
+import ErrorBoundary from './components/ErrorBoundary';
+import { Skeleton } from './components/ui/skeleton';
 import './index.css';
 
-// Implement code splitting with lazy loading
-const App = lazy(() => import('./App.tsx'));
+// Use dynamic import for App component to enable code splitting
+const App = React.lazy(() => import('./App'));
 
-// Add a loading indicator that displays before React renders
-const rootElement = document.getElementById('root');
-
-if (!rootElement) {
-  console.error('Failed to find the root element');
-} else {
-  // Create a loading indicator in the DOM before React hydration
-  if (rootElement.innerHTML === '') {
-    rootElement.innerHTML = `
-      <div style="display: flex; justify-content: center; align-items: center; height: 100vh; flex-direction: column; background-color: #09090b;">
-        <div style="display: inline-block; width: 50px; height: 50px; border: 4px solid #10b981; border-radius: 50%; border-right-color: transparent; animation: spin 1s linear infinite;"></div>
-        <p style="margin-top: 16px; color: #a1a1aa;">Loading MakeMentors.io...</p>
+// Loading component for Suspense fallback
+const AppLoading = () => (
+  <div className="min-h-screen flex flex-col items-center justify-center p-4">
+    <div className="space-y-4 w-full max-w-md">
+      <Skeleton className="h-12 w-3/4 mx-auto" />
+      <Skeleton className="h-96 w-full rounded-md" />
+      <div className="space-y-2">
+        <Skeleton className="h-4 w-full" />
+        <Skeleton className="h-4 w-5/6" />
+        <Skeleton className="h-4 w-4/6" />
       </div>
-      <style>
-        @keyframes spin {
-          to { transform: rotate(360deg); }
-        }
-      </style>
-    `;
-  }
+    </div>
+  </div>
+);
 
-  try {
-    const root = createRoot(rootElement);
-    root.render(
-      <StrictMode>
-        <Suspense fallback={<LoadingState message="Loading application..." withBackdrop={true} />}>
-          <App />
-        </Suspense>
-      </StrictMode>
-    );
-    console.log('App successfully mounted');
-  } catch (error) {
-    console.error('Error rendering the application:', error);
-    
-    // Show error UI if app fails to render
-    if (rootElement) {
-      rootElement.innerHTML = `
-        <div style="padding: 20px; margin: 30px auto; max-width: 600px; text-align: center; background-color: #18181b; border-radius: 8px; color: #f4f4f5;">
-          <h2 style="color: #ef4444; margin-bottom: 16px;">Something went wrong</h2>
-          <p>We're having trouble loading the application. Please try refreshing the page.</p>
-          <button onclick="window.location.reload()" style="background: #10b981; color: black; border: none; padding: 8px 16px; margin-top: 16px; border-radius: 4px; cursor: pointer;">
-            Refresh Page
-          </button>
-        </div>
-      `;
-    }
-  }
-}
+ReactDOM.createRoot(document.getElementById('root')!).render(
+  <React.StrictMode>
+    <ErrorBoundary>
+      <Suspense fallback={<AppLoading />}>
+        <App />
+      </Suspense>
+    </ErrorBoundary>
+  </React.StrictMode>,
+);
+
+// Add global error handling for uncaught errors
+window.addEventListener('error', (event) => {
+  console.error('Uncaught error:', event.error);
+  // In production you would send to error monitoring service
+});
+
+// Add unhandled promise rejection handling
+window.addEventListener('unhandledrejection', (event) => {
+  console.error('Unhandled promise rejection:', event.reason);
+  // In production you would send to error monitoring service
+});
