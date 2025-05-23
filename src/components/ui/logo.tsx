@@ -8,13 +8,15 @@ interface LogoProps {
   withText?: boolean;
   className?: string;
   asLink?: boolean;
+  noLink?: boolean; // Adding the missing noLink prop
 }
 
 const Logo: React.FC<LogoProps> = ({ 
   size = 'md', 
   withText = true,
   className = '',
-  asLink = true
+  asLink = true,
+  noLink = false // Adding default value
 }) => {
   const sizeClasses = {
     sm: 'h-6',
@@ -38,14 +40,15 @@ const Logo: React.FC<LogoProps> = ({
     </>
   );
 
-  return asLink ? (
-    <Link to="/" className={cn(`flex items-center gap-2`, className)}>
-      {content}
-    </Link>
-  ) : (
+  // Use noLink prop for backwards compatibility
+  return (noLink || !asLink) ? (
     <div className={cn(`flex items-center gap-2`, className)}>
       {content}
     </div>
+  ) : (
+    <Link to="/" className={cn(`flex items-center gap-2`, className)}>
+      {content}
+    </Link>
   );
 };
 
