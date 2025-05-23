@@ -142,8 +142,9 @@ const ChatInterface: React.FC = () => {
   const handleSendMessage = async () => {
     if (!userInput.trim() || isTyping || !selectedMentor) return;
     
-    // Add user message
-    addMessage(userInput.trim(), 'user');
+    // Add user message immediately
+    const userMessageContent = userInput.trim();
+    addMessage(userMessageContent, 'user');
     
     // Clear input
     setUserInput('');
@@ -157,17 +158,74 @@ const ChatInterface: React.FC = () => {
       streamCleanup();
       setStreamCleanup(null);
     }
-
+  
     // Store the accumulated response text
     let accumulatedResponse = '';
-
+    let currentSessionId = chatSessionId;
+  
     try {
-      console.log("Sending message with session ID:", chatSessionId);
-      console.log("Message content:", userInput.trim());
+      // If we don't have a session ID, create one now
+      if (!currentSessionId && user) {
+        console.log("Creating chat session before sending message");
+        try {
+          const { data: session, error } = await supabase
+            .from('chat_sessions')
+            .insert({
+              mentor_id: selectedMentor.id,
+              user_id: user.id,
+              name: `Chat with ${selectedMentor.name}`
+            })
+            .select()
+            .single();
+          
+          if (error) throw error;
+          
+          currentSessionId = session.id;
+          setChatSessionId(session.id);
+          console.log('Created new chat session:', session.id);
+          
+          // Save any existing messages to the new session
+          for (const msg of messages) {
+            try {
+              await supabase
+                .from('chat_messages')
+                .insert({
+                  chat_session_id: session.id,
+                  user_id: user.id,
+                  role: msg.role,
+                  content: msg.content
+                });
+            } catch (msgError) {
+              console.error("Error saving existing message:", msgError);
+            }
+          }
+          
+          // Also save the user message we just added
+          try {
+            await supabase
+              .from('chat_messages')
+              .insert({
+                chat_session_id: session.id,
+                user_id: user.id,
+                role: 'user',
+                content: userMessageContent
+              });
+          } catch (msgError) {
+            console.error("Error saving user message:", msgError);
+          }
+          
+        } catch (sessionError) {
+          console.error('Error creating chat session:', sessionError);
+          // Continue without session - this will work but won't save
+          console.log("Continuing without database persistence");
+        }
+      }
+  
+      console.log("Sending message with session ID:", currentSessionId);
       
       // Get and stream response
       const cleanup = await getMentorResponse(
-        userInput.trim(),
+        userMessageContent,
         messages,
         userPreferences,
         selectedMentor,
@@ -176,23 +234,23 @@ const ChatInterface: React.FC = () => {
           accumulatedResponse = text;
           setCurrentResponse(text);
         },
-        (sessionId) => {
+        (returnedSessionId) => {
           // When streaming complete
-          console.log("Stream complete, session ID:", sessionId);
+          console.log("Stream complete, session ID:", returnedSessionId);
           console.log("Final accumulated response length:", accumulatedResponse.length);
           
           // Use the accumulated response instead of state
           if (accumulatedResponse.trim()) {
-            console.log("Saving assistant response to state:", accumulatedResponse.substring(0, 50) + "...");
             addMessage(accumulatedResponse, 'assistant');
           } else {
             console.warn("No response content to save");
           }
           
-          // Update the chat session ID if it was returned
-          if (sessionId && (!chatSessionId || sessionId !== chatSessionId)) {
-            console.log("Setting chat session ID:", sessionId);
-            setChatSessionId(sessionId);
+          // Update the chat session ID if a new one was returned
+          const finalSessionId = returnedSessionId || currentSessionId;
+          if (finalSessionId && finalSessionId !== chatSessionId) {
+            console.log("Updating chat session ID:", finalSessionId);
+            setChatSessionId(finalSessionId);
             // Refresh user sessions list
             refreshUserSessions();
           }
@@ -201,11 +259,12 @@ const ChatInterface: React.FC = () => {
           setIsTyping(false);
           setStreamCleanup(null);
         },
-        chatSessionId
+        currentSessionId
       );
       
       // Store the cleanup function
       setStreamCleanup(() => cleanup);
+      
     } catch (error) {
       console.error('Error getting mentor response:', error);
       toast({
@@ -214,6 +273,7 @@ const ChatInterface: React.FC = () => {
         variant: "destructive",
       });
       setIsTyping(false);
+      setCurrentResponse('');
     }
   };
 
