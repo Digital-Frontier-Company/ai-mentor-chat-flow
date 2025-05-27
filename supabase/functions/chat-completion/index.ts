@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
 
@@ -41,77 +40,99 @@ serve(async (req) => {
     } = body;
     
     if (!messages || !Array.isArray(messages)) {
-      throw new Error("Mentor ID and messages array are required");
+      throw new Error("Messages array is required");
     }
     
-    // Get mentor information - first try custom mentors table
+    // Get mentor information - check if it's a template ID or UUID
     let mentorPrompt = "";
     let mentorName = "";
-    let mentorType = "custom";
+    let mentorType = "template";
+    let sessionMentorId = mentorId;
     
-    const { data: mentor, error: mentorError } = await supabase
-      .from("mentors")
-      .select("name, description, avatar_url")
-      .eq("id", mentorId)
-      .single();
+    // First try to detect if this looks like a UUID
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    const isUuid = uuidRegex.test(mentorId);
     
-    // If not found in mentors table, check mentor_templates
-    if (mentorError && mentorError.message.includes("No rows found")) {
-      mentorType = "template";
+    if (isUuid) {
+      // Try custom mentors table first
+      const { data: mentor, error: mentorError } = await supabase
+        .from("mentors")
+        .select("name, description, avatar_url")
+        .eq("id", mentorId)
+        .single();
+      
+      if (!mentorError && mentor) {
+        mentorPrompt = `You are ${mentor.name}. ${mentor.description}`;
+        mentorName = mentor.name;
+        mentorType = "custom";
+      }
+    }
+    
+    // If not found in custom mentors or not a UUID, check mentor_templates
+    if (!mentorPrompt) {
       const { data: template, error: templateError } = await supabase
         .from("mentor_templates")
         .select("*")
         .eq("template_id", mentorId)
         .single();
       
-      if (templateError) {
-        if (!templateError.message.includes("No rows found")) {
-          console.error("Error fetching mentor template:", templateError);
-        }
-      } else if (template) {
+      if (!templateError && template) {
         mentorPrompt = template.system_prompt_base || 
           `You are a ${template.display_name}. ${template.description_for_user}`;
         mentorName = template.display_name;
+        mentorType = "template";
+        // For templates, we'll use the template_id as a string in a special way
+        sessionMentorId = mentorId; // Keep the string ID for templates
       }
-    } else if (mentor) {
-      mentorPrompt = `You are ${mentor.name}. ${mentor.description}`;
-      mentorName = mentor.name;
     }
 
     if (!mentorPrompt) {
       mentorPrompt = "You are a helpful AI assistant.";
+      mentorName = "AI Assistant";
     }
     
-    // Manage chat session ID
+    // Manage chat session ID - handle template IDs differently
     let sessionId = chatSessionId;
     
     if (!sessionId && userId) {
-      // Create a new session if one wasn't provided
+      // Create a new session - handle template vs custom mentor differently
       console.log("Creating new chat session for user:", userId);
       try {
-        const { data: session, error: sessionError } = await supabase
-          .from("chat_sessions")
-          .insert({
-            mentor_id: mentorId,
-            mentor_type: mentorType,  // Store whether this is a template or custom mentor
-            user_id: userId,
-            name: `Chat with ${mentorName || 'Mentor'}`
-          })
-          .select()
-          .single();
+        let sessionData;
         
-        if (sessionError) throw sessionError;
-        
-        console.log("Created new chat session:", session.id);
-        sessionId = session.id;
+        if (mentorType === "template") {
+          // For templates, store the string ID in a text field or create a mapping
+          // Since the DB expects UUID, we'll create a workaround
+          // Skip database session creation for templates for now
+          console.log("Skipping database session creation for template mentor");
+          sessionId = `template_${mentorId}_${Date.now()}`;
+        } else {
+          // For custom mentors with UUID
+          const { data: session, error: sessionError } = await supabase
+            .from("chat_sessions")
+            .insert({
+              mentor_id: sessionMentorId,
+              mentor_type: mentorType,
+              user_id: userId,
+              name: `Chat with ${mentorName || 'Mentor'}`
+            })
+            .select()
+            .single();
+          
+          if (sessionError) throw sessionError;
+          
+          console.log("Created new chat session:", session.id);
+          sessionId = session.id;
+        }
       } catch (error) {
         console.error("Error creating chat session:", error);
         // Continue anyway to try to get a response
+        sessionId = `fallback_${Date.now()}`;
       }
     }
     
-    // Save the user's message if we have a session and a user
-    if (sessionId && userId && messages.length > 0) {
+    // Save the user's message if we have a proper session ID (not template)
+    if (sessionId && userId && messages.length > 0 && !sessionId.startsWith('template_') && !sessionId.startsWith('fallback_')) {
       const userMessage = messages[messages.length - 1];
       if (userMessage.role === 'user') {
         try {
@@ -172,8 +193,8 @@ serve(async (req) => {
       const fullResponse = { content: "" };
       const decoder = new TextDecoder();
 
-      // Use EdgeRuntime to process the stream in the background
-      EdgeRuntime.waitUntil((async () => {
+      // Use a promise to handle the background processing
+      const backgroundTask = (async () => {
         const reader = response.body?.getReader();
         if (!reader) return;
 
@@ -205,8 +226,8 @@ serve(async (req) => {
             }
           }
 
-          // After collecting the full response, save it to the database
-          if (fullResponse.content && sessionId && userId) {
+          // After collecting the full response, save it to the database (only for proper sessions)
+          if (fullResponse.content && sessionId && userId && !sessionId.startsWith('template_') && !sessionId.startsWith('fallback_')) {
             console.log("Saving assistant response to database for session:", sessionId);
             try {
               const { error: assistantMsgError } = await supabase
@@ -227,7 +248,10 @@ serve(async (req) => {
         } catch (error) {
           console.error('Error processing stream:', error);
         }
-      })());
+      })();
+
+      // Start the background task
+      backgroundTask.catch(console.error);
 
       // Add session ID to response headers so frontend can keep track of it
       const responseHeaders = { 
@@ -262,8 +286,8 @@ serve(async (req) => {
 
       const assistantResponse = data.choices[0].message.content;
 
-      // Save the assistant's response if we have a session and a user
-      if (sessionId && userId) {
+      // Save the assistant's response if we have a proper session ID
+      if (sessionId && userId && !sessionId.startsWith('template_') && !sessionId.startsWith('fallback_')) {
         try {
           const { error: assistantMsgError } = await supabase
             .from("chat_messages")

@@ -54,61 +54,7 @@ const ChatInterface: React.FC = () => {
       console.log("Chat initialization - Session ID:", chatSessionId, "Messages:", messages.length);
 
       if (!chatSessionId) {
-        if (messages.length > 0) {
-          try {
-            console.log("Creating new chat session for existing messages");
-            
-            // Determine mentor type
-            const mentorType = selectedMentor.category === 'custom' ? 'custom' : 'template';
-            
-            // Create a new chat session
-            const { data: session, error } = await supabase
-              .from('chat_sessions')
-              .insert({
-                mentor_id: selectedMentor.id,
-                mentor_type: mentorType,
-                user_id: user.id,
-                name: `Chat with ${selectedMentor.name}`
-              })
-              .select()
-              .single();
-            
-            if (error) {
-              console.error("Error creating chat session:", error);
-              throw error;
-            }
-            
-            console.log('Created new chat session:', session);
-            setChatSessionId(session.id);
-            
-            // Add existing welcome message to the database
-            const welcomeMessage = messages.find(msg => msg.role === 'assistant');
-            if (welcomeMessage) {
-              console.log("Saving welcome message to database...");
-              const { error: msgError } = await supabase
-                .from('chat_messages')
-                .insert({
-                  chat_session_id: session.id,
-                  user_id: user.id,
-                  role: 'assistant',
-                  content: welcomeMessage.content
-                });
-              
-              if (msgError) {
-                console.error("Error saving welcome message:", msgError);
-              } else {
-                console.log("Welcome message saved to database");
-              }
-            }
-          } catch (error) {
-            console.error('Error creating chat session:', error);
-            toast({
-              title: "Warning",
-              description: "Your chat will not be saved. You can continue, but progress won't be preserved.",
-              variant: "destructive",
-            });
-          }
-        } else {
+        if (messages.length === 0) {
           // No messages yet, add welcome message
           console.log("Adding welcome message for new chat");
           const welcomeMessage = getWelcomeMessage(selectedMentor, userPreferences);
@@ -168,92 +114,9 @@ const ChatInterface: React.FC = () => {
     let currentSessionId = chatSessionId;
   
     try {
-      // If we don't have a session ID, create one now
-      if (!currentSessionId && user) {
-        console.log("Creating chat session before sending message");
-        console.log("Selected mentor:", selectedMentor);
-        console.log("Mentor ID:", selectedMentor.id);
-        console.log("User ID:", user.id);
-        
-        // Add the requested debug info
-        console.log("Debug info:", {
-          selectedMentor,
-          user,
-          mentorId: selectedMentor.id,
-          userId: user.id,
-          mentorType: typeof selectedMentor.id
-        });
-        
-        try {
-          // Determine mentor type based on category
-          const mentorType = selectedMentor.category === 'custom' ? 'custom' : 'template';
-          
-          const { data: session, error } = await supabase
-            .from('chat_sessions')
-            .insert({
-              mentor_id: selectedMentor.id,
-              mentor_type: mentorType,
-              user_id: user.id,
-              name: `Chat with ${selectedMentor.name}`
-            })
-            .select()
-            .single();
-          
-          if (error) {
-            console.error("Session creation error details:", error);
-            throw error;
-          }
-          
-          currentSessionId = session.id;
-          setChatSessionId(session.id);
-          console.log('Created new chat session:', session.id);
-          
-          // Save any existing messages to the new session
-          for (const msg of messages) {
-            try {
-              await supabase
-                .from('chat_messages')
-                .insert({
-                  chat_session_id: session.id,
-                  user_id: user.id,
-                  role: msg.role,
-                  content: msg.content
-                });
-            } catch (msgError) {
-              console.error("Error saving existing message:", msgError);
-            }
-          }
-          
-          // Also save the user message we just added
-          try {
-            await supabase
-              .from('chat_messages')
-              .insert({
-                chat_session_id: session.id,
-                user_id: user.id,
-                role: 'user',
-                content: userMessageContent
-              });
-          } catch (msgError) {
-            console.error("Error saving user message:", msgError);
-          }
-          
-        } catch (sessionError) {
-          console.error('Error creating chat session:', sessionError);
-          console.error('Session error details:', {
-            message: sessionError.message,
-            details: sessionError.details,
-            hint: sessionError.hint,
-            code: sessionError.code
-          });
-          // Continue without session - this will work but won't save
-          console.log("Continuing without database persistence");
-        }
-      }
-  
       console.log("Sending message with session ID:", currentSessionId);
       
-      // Get and stream response
+      // Get and stream response - let the edge function handle session creation
       const cleanup = await getMentorResponse(
         userMessageContent,
         messages,
@@ -393,7 +256,7 @@ const ChatInterface: React.FC = () => {
               className={`h-[60px] ${selectedMentor.gradient ? `bg-gradient-to-r ${selectedMentor.gradient}` : ''} hover:opacity-90`}
             >
               <Send size={18} />
-            </Button>
+            />
           </div>
         </div>
       </Card>
