@@ -1,11 +1,12 @@
 
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render } from '@testing-library/react';
 
 // Re-export everything from testing library
 export * from '@testing-library/react';
 
-// Re-export screen explicitly
+// Import screen separately and re-export it
+import { screen } from '@testing-library/dom';
 export { screen };
 
 // Custom render function (if needed for providers)

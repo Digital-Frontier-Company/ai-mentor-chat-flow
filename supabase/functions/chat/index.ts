@@ -24,7 +24,7 @@ serve(async (req) => {
       throw new Error("Message is required in POST body");
     }
 
-    // Call OpenAI chat completions
+    // Call OpenAI chat completions with new SDK v4 syntax
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -40,6 +40,7 @@ serve(async (req) => {
           }
         ],
         temperature: 0.7,
+        stream: false, // Set to true if you want streaming
       }),
     });
 
