@@ -1,5 +1,5 @@
 
-import React, { Suspense } from 'react';
+import React from 'react';
 import ReactDOM from 'react-dom/client';
 import ErrorBoundary from './components/ErrorBoundary';
 import { Skeleton } from './components/ui/skeleton';
@@ -23,12 +23,17 @@ const AppLoading = () => (
   </div>
 );
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
+const rootElement = document.getElementById('root');
+if (!rootElement) {
+  throw new Error('Root element not found');
+}
+
+ReactDOM.createRoot(rootElement).render(
   <React.StrictMode>
     <ErrorBoundary>
-      <Suspense fallback={<AppLoading />}>
+      <React.Suspense fallback={<AppLoading />}>
         <App />
-      </Suspense>
+      </React.Suspense>
     </ErrorBoundary>
   </React.StrictMode>,
 );
@@ -36,11 +41,9 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
 // Add global error handling for uncaught errors
 window.addEventListener('error', (event) => {
   console.error('Uncaught error:', event.error);
-  // In production you would send to error monitoring service
 });
 
 // Add unhandled promise rejection handling
 window.addEventListener('unhandledrejection', (event) => {
   console.error('Unhandled promise rejection:', event.reason);
-  // In production you would send to error monitoring service
 });
