@@ -256,7 +256,7 @@ const ChatInterface: React.FC = () => {
               className={`h-[60px] ${selectedMentor.gradient ? `bg-gradient-to-r ${selectedMentor.gradient}` : ''} hover:opacity-90`}
             >
               <Send size={18} />
-            />
+            </Button>
           </div>
         </div>
       </Card>
