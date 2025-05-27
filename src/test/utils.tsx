@@ -1,7 +1,6 @@
 
 import React from 'react';
-import { render } from '@testing-library/react';
-import { screen } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 
 // Re-export everything from testing library
 export * from '@testing-library/react';
