@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
+import { Toaster as SonnerToaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
@@ -38,7 +38,7 @@ const App: React.FC = () => {
       <HelmetProvider>
         <TooltipProvider>
           <Toaster />
-          <Sonner />
+          <SonnerToaster />
           <BrowserRouter>
             <AuthProvider>
               <Routes>
@@ -63,6 +63,7 @@ const App: React.FC = () => {
                 } />
                 <Route path="/pricing" element={<Pricing />} />
                 <Route path="/legal/:page" element={<LegalPages />} />
+                <Route path="/chat" element={<Chat />} />
                 {/* Create a dashboard redirect for convenience */}
                 <Route path="/dashboard" element={<Navigate to="/app" replace />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

@@ -40,7 +40,7 @@ serve(async (req) => {
           }
         ],
         temperature: 0.7,
-        stream: false, // Set to true if you want streaming
+        stream: false,
       }),
     });
 
