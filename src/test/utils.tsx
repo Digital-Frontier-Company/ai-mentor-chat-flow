@@ -1,22 +1,19 @@
 
-import React, { ReactElement } from 'react';
-import { render, RenderOptions } from '@testing-library/react';
-import { BrowserRouter } from 'react-router-dom';
+import React from 'react';
+import { render } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 
-// Add providers here as needed (auth, theme, etc.)
-const AllProviders: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  return (
-    <BrowserRouter>
-      {children}
-    </BrowserRouter>
-  );
+// Re-export everything from testing library
+export * from '@testing-library/react';
+export { screen };
+
+// Custom render function (if needed for providers)
+const customRender = (ui: React.ReactElement, options = {}) => {
+  return render(ui, {
+    // Add any global providers here if needed
+    ...options,
+  });
 };
 
-const customRender = (
-  ui: ReactElement,
-  options?: Omit<RenderOptions, 'wrapper'>
-) => render(ui, { wrapper: AllProviders, ...options });
-
-// Re-export everything
-export * from '@testing-library/react';
+// Override the built-in render with our custom one
 export { customRender as render };
