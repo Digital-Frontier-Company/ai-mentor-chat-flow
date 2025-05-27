@@ -15,6 +15,7 @@ import Settings from "./pages/Settings";
 import UserProfile from "./pages/UserProfile";
 import Pricing from "./pages/Pricing";
 import LegalPages from "./pages/LegalPages";
+import Chat from "./pages/Chat";
 import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 
