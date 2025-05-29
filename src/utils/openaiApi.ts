@@ -142,7 +142,7 @@ export const getMentorResponse = async (
       const reader = response.body?.getReader();
       const decoder = new TextDecoder();
       let fullText = '';
-      let isStreamCancelled = false;
+      let isCancelled = false;
 
       if (!reader) {
         throw new Error('Stream reader not available');
@@ -151,17 +151,11 @@ export const getMentorResponse = async (
       // Process the stream
       const processStream = async () => {
         try {
-          while (true) {
-            if (isStreamCancelled) {
-              console.log("Stream cancelled by user");
-              break;
-            }
-            
+          while (!isCancelled) {
             const { done, value } = await reader.read();
             
             if (done) {
               console.log("Stream completed, final text length:", fullText.length);
-              console.log("Calling onComplete with session ID:", responseChatSessionId);
               onComplete(responseChatSessionId || undefined);
               break;
             }
@@ -173,13 +167,14 @@ export const getMentorResponse = async (
               .filter(line => line.trim().startsWith('data: '));
 
             for (const line of lines) {
+              if (isCancelled) break;
+              
               const data = line.replace(/^data: /, '').trim();
               
               if (data === '[DONE]') {
                 console.log("Stream marked as done via [DONE], final text length:", fullText.length);
-                console.log("Calling onComplete with session ID:", responseChatSessionId);
                 onComplete(responseChatSessionId || undefined);
-                return; // Exit the function completely
+                return;
               }
               
               const { content, done: lineIsDone } = parseOpenAIStreamData(data);
@@ -191,16 +186,14 @@ export const getMentorResponse = async (
               
               if (lineIsDone) {
                 console.log("Stream marked as done via finish_reason, final text length:", fullText.length);
-                console.log("Calling onComplete with session ID:", responseChatSessionId);
                 onComplete(responseChatSessionId || undefined);
-                return; // Exit the function completely
+                return;
               }
             }
           }
         } catch (error) {
-          if (!isStreamCancelled) {
+          if (!isCancelled) {
             console.error('Error processing stream:', error);
-            // Still call onComplete even if there's an error, but with whatever we accumulated
             onComplete(responseChatSessionId || undefined);
           }
         }
@@ -212,7 +205,7 @@ export const getMentorResponse = async (
       // Return a cleanup function
       return () => {
         console.log("Cancelling stream");
-        isStreamCancelled = true;
+        isCancelled = true;
         reader.cancel('User cancelled the stream').catch(console.error);
       };
     } else {

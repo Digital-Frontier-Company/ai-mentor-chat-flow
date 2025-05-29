@@ -7,7 +7,6 @@ import { Send, Loader2, ArrowLeft } from 'lucide-react';
 import { useMentor } from '@/contexts/MentorContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { sendHybridMessage } from '@/utils/hybridChatApi';
-import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
 const ChatInterface: React.FC = () => {
@@ -59,18 +58,23 @@ const ChatInterface: React.FC = () => {
     await addMessage(messageToSend, 'user');
 
     try {
+      console.log("Starting chat request with mentor:", selectedMentor.name);
+      
       // Use the hybrid chat API (which now only uses Supabase Edge Function)
       const cancelFunction = await sendHybridMessage(
         messageToSend,
         messages,
         userPreferences,
         selectedMentor,
-        // onChunk callback
+        // onChunk callback - receives incremental text
         (chunk: string) => {
+          console.log("Received chunk, length:", chunk.length);
           setStreamingResponse(chunk);
         },
-        // onComplete callback
+        // onComplete callback - called when streaming is done
         async (sessionId?: string) => {
+          console.log("Streaming complete, session ID:", sessionId);
+          
           if (sessionId && sessionId !== chatSessionId) {
             setChatSessionId(sessionId);
             await refreshUserSessions();

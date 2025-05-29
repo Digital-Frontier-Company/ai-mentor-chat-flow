@@ -49,48 +49,51 @@ serve(async (req) => {
       throw new Error("Mentor ID and messages array are required");
     }
     
-    // Determine if this is a template mentor or custom mentor
-    let mentorType = "custom";
+    // Determine mentor type and get system prompt
     let systemPrompt = "";
     let mentorName = "AI Mentor";
+    let mentorType = "template";
     
-    // First try to get the mentor from the mentors table (custom mentors)
-    const { data: customMentor, error: customMentorError } = await supabase
-      .from("mentors")
-      .select("name, description")
-      .eq("id", mentorId)
-      .single();
+    // Check if mentorId looks like a UUID (custom mentor) or template ID
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(mentorId);
     
-    if (customMentorError) {
-      if (!customMentorError.message.includes("No rows found")) {
+    if (isUUID) {
+      // This is a custom mentor - query mentors table
+      mentorType = "custom";
+      console.log("Fetching custom mentor:", mentorId);
+      
+      const { data: customMentor, error: customMentorError } = await supabase
+        .from("mentors")
+        .select("name, description")
+        .eq("id", mentorId)
+        .single();
+      
+      if (customMentorError || !customMentor) {
         console.error("Error fetching custom mentor:", customMentorError);
+        throw new Error(`Custom mentor not found for ID: ${mentorId}`);
       }
       
-      // If not found in mentors table, check mentor_templates
-      mentorType = "template";
+      systemPrompt = `You are ${customMentor.name}, a mentor with the following expertise: ${customMentor.description}. Your goal is to help users by providing guidance, answering questions, and offering advice in your area of expertise.`;
+      mentorName = customMentor.name;
+      console.log("Using custom mentor:", mentorName);
+    } else {
+      // This is a template mentor - query mentor_templates table
+      console.log("Fetching template mentor:", mentorId);
+      
       const { data: templateMentor, error: templateMentorError } = await supabase
         .from("mentor_templates")
         .select("display_name, default_mentor_name, system_prompt_base")
         .eq("template_id", mentorId)
         .single();
       
-      if (templateMentorError) {
+      if (templateMentorError || !templateMentor) {
         console.error("Error fetching mentor template:", templateMentorError);
-        throw new Error(`Error fetching mentor template: ${templateMentorError.message}`);
-      }
-      
-      if (!templateMentor) {
         throw new Error(`Mentor template not found for ID: ${mentorId}`);
       }
       
       systemPrompt = templateMentor.system_prompt_base;
       mentorName = templateMentor.display_name || templateMentor.default_mentor_name;
       console.log("Using template mentor:", mentorName);
-    } else {
-      // Use custom mentor
-      systemPrompt = `You are ${customMentor.name}, a mentor with the following expertise: ${customMentor.description}. Your goal is to help users by providing guidance, answering questions, and offering advice in your area of expertise.`;
-      mentorName = customMentor.name;
-      console.log("Using custom mentor:", mentorName);
     }
     
     if (!systemPrompt) {
@@ -183,18 +186,20 @@ serve(async (req) => {
 
     // Create response headers with session ID
     const responseHeaders = { 
-      ...corsHeaders
+      ...corsHeaders,
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache",
+      "Connection": "keep-alive"
     };
     
     if (sessionId) {
       responseHeaders["X-Chat-Session-Id"] = sessionId;
     }
 
-    // Always use streaming response
     console.log("Starting OpenAI streaming request...");
     
     // Create a streaming request to OpenAI
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    const openaiResponse = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${OPENAI_API_KEY}`,
@@ -208,9 +213,9 @@ serve(async (req) => {
       }),
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("OpenAI API error:", response.status, errorText);
+    if (!openaiResponse.ok) {
+      const errorText = await openaiResponse.text();
+      console.error("OpenAI API error:", openaiResponse.status, errorText);
       throw new Error(`OpenAI API error: ${errorText}`);
     }
     
@@ -219,9 +224,9 @@ serve(async (req) => {
     // Create a readable stream to handle the response
     let fullResponse = "";
     
-    const stream = new ReadableStream({
+    const responseStream = new ReadableStream({
       async start(controller) {
-        const reader = response.body?.getReader();
+        const reader = openaiResponse.body?.getReader();
         const decoder = new TextDecoder();
         
         if (!reader) {
@@ -258,6 +263,8 @@ serve(async (req) => {
                 }
               }
               
+              // Send final done message
+              controller.enqueue(new TextEncoder().encode("data: [DONE]\n\n"));
               controller.close();
               break;
             }
@@ -284,7 +291,7 @@ serve(async (req) => {
                 }
                 
                 // Forward the chunk to the client
-                controller.enqueue(new TextEncoder().encode(line + '\n'));
+                controller.enqueue(new TextEncoder().encode(line + '\n\n'));
               } catch (e) {
                 console.error('Error parsing SSE data:', e, 'Data:', data);
               }
@@ -298,13 +305,8 @@ serve(async (req) => {
     });
 
     // Return the streaming response with session ID
-    return new Response(stream, {
-      headers: { 
-        ...responseHeaders, 
-        "Content-Type": "text/event-stream",
-        "Cache-Control": "no-cache",
-        "Connection": "keep-alive"
-      },
+    return new Response(responseStream, {
+      headers: responseHeaders,
     });
     
   } catch (error) {
