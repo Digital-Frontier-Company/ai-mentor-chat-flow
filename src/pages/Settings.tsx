@@ -1,9 +1,9 @@
-
 import React from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import AddFinancialTemplates from '@/components/admin/AddFinancialTemplates';
+import ChatDebugPanel from '@/components/admin/ChatDebugPanel';
 
 const Settings = () => {
   const { user } = useAuth();
@@ -12,7 +12,7 @@ const Settings = () => {
   const isAdmin = user && user.email === 'david@memphisearthmovers.com';
   
   return (
-    <div className="container max-w-4xl py-8">
+    <div className="min-h-screen bg-zinc-950 text-white">
       <h1 className="text-3xl font-bold mb-6">Settings</h1>
       
       <Card className="mb-6">
@@ -41,6 +41,12 @@ const Settings = () => {
           </CardContent>
         </Card>
       )}
+      
+      {/* Chat Integration Debug Panel */}
+      <section>
+        <h2 className="text-xl font-semibold mb-4">Chat Integration</h2>
+        <ChatDebugPanel />
+      </section>
     </div>
   );
 };

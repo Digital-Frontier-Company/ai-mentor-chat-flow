@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { useMentor } from '@/contexts/MentorContext';
 import { Button } from '@/components/ui/button';
@@ -10,6 +9,8 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { getWelcomeMessage } from '@/utils/openaiApi';
+import { sendHybridMessage } from '@/utils/hybridChatApi';
+import { useN8nIntegration } from '@/config/n8nConfig';
 
 const ChatInterface: React.FC = () => {
   const { 
@@ -115,9 +116,10 @@ const ChatInterface: React.FC = () => {
   
     try {
       console.log("Sending message with session ID:", currentSessionId);
+      console.log("Using n8n integration:", useN8nIntegration());
       
-      // Get and stream response - let the edge function handle session creation
-      const cleanup = await getMentorResponse(
+      // Use the hybrid chat API
+      const cleanup = await sendHybridMessage(
         userMessageContent,
         messages,
         userPreferences,
@@ -152,7 +154,8 @@ const ChatInterface: React.FC = () => {
           setIsTyping(false);
           setStreamCleanup(null);
         },
-        currentSessionId
+        currentSessionId,
+        user?.id
       );
       
       // Store the cleanup function
@@ -162,7 +165,7 @@ const ChatInterface: React.FC = () => {
       console.error('Error getting mentor response:', error);
       toast({
         title: "Error",
-        description: "Failed to get a response from the mentor. Please try again.",
+        description: `Failed to get a response from the mentor. ${error.message || 'Please try again.'}`,
         variant: "destructive",
       });
       setIsTyping(false);
