@@ -43,6 +43,8 @@ serve(async (req) => {
       stream = true 
     } = await req.json();
     
+    console.log("Received request:", { mentorId, userId, chatSessionId, messagesCount: messages?.length });
+    
     if (!mentorId || !messages || !Array.isArray(messages)) {
       throw new Error("Mentor ID and messages array are required");
     }
@@ -55,7 +57,7 @@ serve(async (req) => {
     // First try to get the mentor from the mentors table (custom mentors)
     const { data: customMentor, error: customMentorError } = await supabase
       .from("mentors")
-      .select("name, description, system_prompt")
+      .select("name, description")
       .eq("id", mentorId)
       .single();
     
@@ -73,6 +75,7 @@ serve(async (req) => {
         .single();
       
       if (templateMentorError) {
+        console.error("Error fetching mentor template:", templateMentorError);
         throw new Error(`Error fetching mentor template: ${templateMentorError.message}`);
       }
       
@@ -82,11 +85,12 @@ serve(async (req) => {
       
       systemPrompt = templateMentor.system_prompt_base;
       mentorName = templateMentor.display_name || templateMentor.default_mentor_name;
+      console.log("Using template mentor:", mentorName);
     } else {
       // Use custom mentor
-      systemPrompt = customMentor.system_prompt || 
-        `You are ${customMentor.name}, a mentor with the following expertise: ${customMentor.description}. Your goal is to help users by providing guidance, answering questions, and offering advice in your area of expertise.`;
+      systemPrompt = `You are ${customMentor.name}, a mentor with the following expertise: ${customMentor.description}. Your goal is to help users by providing guidance, answering questions, and offering advice in your area of expertise.`;
       mentorName = customMentor.name;
+      console.log("Using custom mentor:", mentorName);
     }
     
     if (!systemPrompt) {
@@ -110,12 +114,14 @@ serve(async (req) => {
           .single();
         
         if (sessionError) {
+          console.error("Error creating chat session:", sessionError);
           throw new Error(`Error creating chat session: ${sessionError.message}`);
         }
         
         sessionId = session.id;
-        console.log("Created new chat session for user:", userId);
+        console.log("Created new chat session:", sessionId);
       } catch (error) {
+        console.error("Error creating chat session:", error);
         throw new Error(`Error creating chat session: ${error.message}`);
       }
     }
@@ -131,17 +137,17 @@ serve(async (req) => {
         .limit(MAX_MESSAGE_HISTORY);
       
       if (historyError) {
-        throw new Error(`Error fetching message history: ${historyError.message}`);
+        console.error("Error fetching message history:", historyError);
+      } else {
+        // Add message history in correct order (oldest first)
+        conversationHistory = [
+          ...messageHistory.reverse().map(msg => ({
+            role: msg.role,
+            content: msg.content
+          })),
+          ...messages  // Add current message(s)
+        ];
       }
-      
-      // Add message history in correct order (oldest first)
-      conversationHistory = [
-        ...messageHistory.reverse().map(msg => ({
-          role: msg.role,
-          content: msg.content
-        })),
-        ...messages  // Add current message(s)
-      ];
     }
     
     // Extract the user's latest message
@@ -159,11 +165,10 @@ serve(async (req) => {
         });
       
       if (userMsgError) {
-        throw new Error(`Error saving user message: ${userMsgError.message}`);
+        console.error("Error saving user message:", userMsgError);
       }
     } catch (error) {
-      console.error(`Error saving user message: ${error.message}`);
-      // Continue anyway to try to get a response
+      console.error("Error saving user message:", error);
     }
     
     // Build the conversation history with the detailed system prompt
@@ -173,7 +178,8 @@ serve(async (req) => {
     ];
 
     console.log("Using system prompt for", mentorName);
-    console.log("System prompt preview:", systemPrompt.substring(0, 100) + "...");
+    console.log("System prompt preview:", systemPrompt.substring(0, 200) + "...");
+    console.log("Conversation length:", conversations.length);
 
     // Create response headers with session ID
     const responseHeaders = { 
@@ -184,42 +190,79 @@ serve(async (req) => {
       responseHeaders["X-Chat-Session-Id"] = sessionId;
     }
 
-    // If stream is true, use streaming response
-    if (stream) {
-      // Create a streaming request to OpenAI
-      const response = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${OPENAI_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "gpt-4o-mini",
-          messages: conversations,
-          temperature: 0.7,
-          stream: true,
-        }),
-      });
+    // Always use streaming response
+    console.log("Starting OpenAI streaming request...");
+    
+    // Create a streaming request to OpenAI
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${OPENAI_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "gpt-4o-mini",
+        messages: conversations,
+        temperature: 0.7,
+        stream: true,
+      }),
+    });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`OpenAI API error: ${errorText}`);
-      }
-      
-      // Process the response in a background task
-      const fullResponse = { content: "" };
-      const decoder = new TextDecoder();
-
-      // Use EdgeRuntime to process the stream in the background
-      EdgeRuntime.waitUntil((async () => {
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("OpenAI API error:", response.status, errorText);
+      throw new Error(`OpenAI API error: ${errorText}`);
+    }
+    
+    console.log("OpenAI streaming response received, setting up stream processing...");
+    
+    // Create a readable stream to handle the response
+    let fullResponse = "";
+    
+    const stream = new ReadableStream({
+      async start(controller) {
         const reader = response.body?.getReader();
-        if (!reader) return;
-
+        const decoder = new TextDecoder();
+        
+        if (!reader) {
+          controller.close();
+          return;
+        }
+        
         try {
           while (true) {
             const { done, value } = await reader.read();
-            if (done) break;
-
+            
+            if (done) {
+              console.log("Stream completed, saving response. Length:", fullResponse.length);
+              
+              // Save the complete response to database
+              if (fullResponse && sessionId) {
+                try {
+                  const { error: saveError } = await supabase
+                    .from("chat_messages")
+                    .insert({
+                      chat_session_id: sessionId,
+                      user_id: userId,
+                      role: "assistant",
+                      content: fullResponse,
+                    });
+                    
+                  if (saveError) {
+                    console.error("Error saving assistant message:", saveError);
+                  } else {
+                    console.log("Successfully saved assistant message to database");
+                  }
+                } catch (error) {
+                  console.error("Error saving assistant message:", error);
+                }
+              }
+              
+              controller.close();
+              break;
+            }
+            
+            // Decode the chunk and process the events
             const chunk = decoder.decode(value, { stream: true });
             const lines = chunk
               .split('\n')
@@ -228,107 +271,42 @@ serve(async (req) => {
             for (const line of lines) {
               const data = line.replace(/^data: /, '').trim();
               
-              if (data === '[DONE]') continue;
+              if (data === '[DONE]') {
+                continue;
+              }
               
               try {
                 const json = JSON.parse(data);
                 const content = json.choices?.[0]?.delta?.content || '';
                 
                 if (content) {
-                  fullResponse.content += content;
+                  fullResponse += content;
                 }
-              } catch (e) {
-                console.error('Error parsing SSE data:', e);
-              }
-            }
-          }
-
-          // After collecting the full response, save it to the database
-          if (fullResponse.content) {
-            try {
-              const { error: saveError } = await supabase
-                .from("chat_messages")
-                .insert({
-                  chat_session_id: sessionId,
-                  user_id: userId,
-                  role: "assistant",
-                  content: fullResponse.content,
-                });
                 
-              if (saveError) {
-                console.error(`Error saving assistant message: ${saveError.message}`);
-              } else {
-                console.log("Successfully saved assistant message to database");
+                // Forward the chunk to the client
+                controller.enqueue(new TextEncoder().encode(line + '\n'));
+              } catch (e) {
+                console.error('Error parsing SSE data:', e, 'Data:', data);
               }
-            } catch (error) {
-              console.error(`Error saving assistant message: ${error.message}`);
             }
           }
         } catch (error) {
           console.error('Error processing stream:', error);
+          controller.error(error);
         }
-      })());
-
-      // Return the streaming response with session ID
-      return new Response(response.body, {
-        headers: { 
-          ...responseHeaders, 
-          "Content-Type": "text/event-stream"
-        },
-      });
-    } else {
-      // Non-streaming response for compatibility
-      const response = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${OPENAI_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "gpt-4o-mini",
-          messages: conversations,
-          temperature: 0.7,
-          max_tokens: 1000,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`OpenAI API error: ${errorText}`);
       }
+    });
 
-      const data = await response.json();
-      const assistantResponse = data.choices[0].message.content;
-      
-      // Save the assistant message
-      try {
-        const { error: assistantMsgError } = await supabase
-          .from("chat_messages")
-          .insert({
-            chat_session_id: sessionId,
-            user_id: userId,
-            role: "assistant",
-            content: assistantResponse,
-          });
-        
-        if (assistantMsgError) {
-          throw new Error(`Error saving assistant message: ${assistantMsgError.message}`);
-        }
-      } catch (error) {
-        throw new Error(`Error saving assistant message: ${error.message}`);
-      }
-
-      // Return the response with session ID
-      return new Response(
-        JSON.stringify({ 
-          response: assistantResponse, 
-          sessionId,
-        }),
-        {
-          headers: { ...responseHeaders, "Content-Type": "application/json" },
-        }
-      );
-    }
+    // Return the streaming response with session ID
+    return new Response(stream, {
+      headers: { 
+        ...responseHeaders, 
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        "Connection": "keep-alive"
+      },
+    });
+    
   } catch (error) {
     console.error("Error processing request:", error);
     return new Response(

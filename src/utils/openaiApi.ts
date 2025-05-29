@@ -1,3 +1,4 @@
+
 import { UserPreferences, MentorType, Message } from '@/contexts/MentorContext';
 import { supabase } from "@/integrations/supabase/client";
 
@@ -72,7 +73,7 @@ export const getMentorResponse = async (
   chatSessionId?: string | null
 ) => {
   try {
-    console.log("Starting to stream...");
+    console.log("Starting getMentorResponse...");
     console.log("Message received:", userMessage);
     
     // Format messages for the API
@@ -135,10 +136,13 @@ export const getMentorResponse = async (
     const contentType = response.headers.get('Content-Type') || '';
     
     if (contentType.includes('text/event-stream')) {
+      console.log("Processing streaming response...");
+      
       // Handle streaming response
       const reader = response.body?.getReader();
       const decoder = new TextDecoder();
       let fullText = '';
+      let isStreamCancelled = false;
 
       if (!reader) {
         throw new Error('Stream reader not available');
@@ -148,6 +152,11 @@ export const getMentorResponse = async (
       const processStream = async () => {
         try {
           while (true) {
+            if (isStreamCancelled) {
+              console.log("Stream cancelled by user");
+              break;
+            }
+            
             const { done, value } = await reader.read();
             
             if (done) {
@@ -166,6 +175,13 @@ export const getMentorResponse = async (
             for (const line of lines) {
               const data = line.replace(/^data: /, '').trim();
               
+              if (data === '[DONE]') {
+                console.log("Stream marked as done via [DONE], final text length:", fullText.length);
+                console.log("Calling onComplete with session ID:", responseChatSessionId);
+                onComplete(responseChatSessionId || undefined);
+                return; // Exit the function completely
+              }
+              
               const { content, done: lineIsDone } = parseOpenAIStreamData(data);
               
               if (content) {
@@ -174,7 +190,7 @@ export const getMentorResponse = async (
               }
               
               if (lineIsDone) {
-                console.log("Stream marked as done via data, final text length:", fullText.length);
+                console.log("Stream marked as done via finish_reason, final text length:", fullText.length);
                 console.log("Calling onComplete with session ID:", responseChatSessionId);
                 onComplete(responseChatSessionId || undefined);
                 return; // Exit the function completely
@@ -182,9 +198,11 @@ export const getMentorResponse = async (
             }
           }
         } catch (error) {
-          console.error('Error processing stream:', error);
-          // Still call onComplete even if there's an error, but with whatever we accumulated
-          onComplete(responseChatSessionId || undefined);
+          if (!isStreamCancelled) {
+            console.error('Error processing stream:', error);
+            // Still call onComplete even if there's an error, but with whatever we accumulated
+            onComplete(responseChatSessionId || undefined);
+          }
         }
       };
 
@@ -194,6 +212,7 @@ export const getMentorResponse = async (
       // Return a cleanup function
       return () => {
         console.log("Cancelling stream");
+        isStreamCancelled = true;
         reader.cancel('User cancelled the stream').catch(console.error);
       };
     } else {
@@ -210,7 +229,6 @@ export const getMentorResponse = async (
       
       console.log("Received non-streaming response, session ID:", sessionId);
       console.log("Message received:", aiResponse.substring(0, 50) + "...");
-      console.log("Saving message...");
       
       // Fall back to simulated streaming
       return simulateStreamingResponse(
