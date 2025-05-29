@@ -1,40 +1,36 @@
+
 import React, { useState, useRef, useEffect } from 'react';
-import { useMentor } from '@/contexts/MentorContext';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
-import { ArrowLeft, Send } from 'lucide-react';
-import { getMentorResponse } from '@/utils/openaiApi';
-import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
+import { Send, Loader2, ArrowLeft } from 'lucide-react';
+import { useMentor } from '@/contexts/MentorContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { getWelcomeMessage } from '@/utils/openaiApi';
 import { sendHybridMessage } from '@/utils/hybridChatApi';
-import { useN8nIntegration } from '@/config/n8nConfig';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 const ChatInterface: React.FC = () => {
-  const { 
-    selectedMentor, 
-    userPreferences, 
-    messages, 
-    addMessage, 
-    isTyping, 
-    setIsTyping, 
-    setCurrentStep, 
-    resetChat,
+  const {
+    selectedMentor,
+    userPreferences,
+    messages,
+    addMessage,
+    isTyping,
+    setIsTyping,
+    setCurrentStep,
     chatSessionId,
     setChatSessionId,
-    loadChatSession,
     refreshUserSessions
   } = useMentor();
-  
+
   const { user } = useAuth();
-  const [userInput, setUserInput] = useState('');
-  const [currentResponse, setCurrentResponse] = useState('');
-  const [streamCleanup, setStreamCleanup] = useState<(() => void) | null>(null);
+  const { toast } = useToast();
+  const [input, setInput] = useState('');
+  const [streamingResponse, setStreamingResponse] = useState('');
+  const [currentCancelFunction, setCurrentCancelFunction] = useState<(() => void) | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const { toast } = useToast();
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -42,227 +38,213 @@ const ChatInterface: React.FC = () => {
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages, currentResponse]);
+  }, [messages, streamingResponse]);
 
-  // Initialize chat session if not already done
   useEffect(() => {
-    const initializeChat = async () => {
-      if (!user || !selectedMentor) {
-        console.log("Missing user or mentor, cannot initialize chat");
-        return;
-      }
-
-      console.log("Chat initialization - Session ID:", chatSessionId, "Messages:", messages.length);
-
-      if (!chatSessionId) {
-        if (messages.length === 0) {
-          // No messages yet, add welcome message
-          console.log("Adding welcome message for new chat");
-          const welcomeMessage = getWelcomeMessage(selectedMentor, userPreferences);
-          addMessage(welcomeMessage, 'assistant');
-        }
-      } else {
-        // Already have a session ID, make sure messages are loaded
-        console.log("Chat session exists:", chatSessionId);
-        if (messages.length === 0) {
-          const success = await loadChatSession(chatSessionId);
-          if (!success) {
-            console.error("Failed to load existing chat session");
-            toast({
-              title: "Error",
-              description: "Failed to load chat history.",
-              variant: "destructive",
-            });
-          } else {
-            console.log("Successfully loaded chat session");
-          }
-        }
-      }
-    };
-    
-    initializeChat();
-    
-    // Cleanup function for any active streams when component unmounts
-    return () => {
-      if (streamCleanup) {
-        streamCleanup();
-      }
-    };
-  }, [user, selectedMentor, chatSessionId]);
-
-  const handleSendMessage = async () => {
-    if (!userInput.trim() || isTyping || !selectedMentor) return;
-    
-    // Add user message immediately
-    const userMessageContent = userInput.trim();
-    addMessage(userMessageContent, 'user');
-    
-    // Clear input
-    setUserInput('');
-    
-    // Set typing state
-    setIsTyping(true);
-    setCurrentResponse('');
-    
-    // Cancel any existing stream
-    if (streamCleanup) {
-      streamCleanup();
-      setStreamCleanup(null);
+    // Auto-focus the textarea when the component mounts
+    if (textareaRef.current) {
+      textareaRef.current.focus();
     }
-  
-    // Store the accumulated response text
-    let accumulatedResponse = '';
-    let currentSessionId = chatSessionId;
-  
+  }, []);
+
+  const handleSend = async () => {
+    if (!input.trim() || isTyping || !selectedMentor) return;
+
+    const messageToSend = input.trim();
+    setInput('');
+    setIsTyping(true);
+    setStreamingResponse('');
+
+    // Add the user message immediately
+    await addMessage(messageToSend, 'user');
+
     try {
-      console.log("Sending message with session ID:", currentSessionId);
-      console.log("Using n8n integration:", useN8nIntegration());
-      
-      // Use the hybrid chat API
-      const cleanup = await sendHybridMessage(
-        userMessageContent,
+      // Use the hybrid chat API (which now only uses Supabase Edge Function)
+      const cancelFunction = await sendHybridMessage(
+        messageToSend,
         messages,
         userPreferences,
         selectedMentor,
-        (text) => {
-          // Update both state and our local variable
-          accumulatedResponse = text;
-          setCurrentResponse(text);
+        // onChunk callback
+        (chunk: string) => {
+          setStreamingResponse(chunk);
         },
-        (returnedSessionId) => {
-          // When streaming complete
-          console.log("Stream complete, session ID:", returnedSessionId);
-          console.log("Final accumulated response length:", accumulatedResponse.length);
-          
-          // Use the accumulated response instead of state
-          if (accumulatedResponse.trim()) {
-            addMessage(accumulatedResponse, 'assistant');
-          } else {
-            console.warn("No response content to save");
+        // onComplete callback
+        async (sessionId?: string) => {
+          if (sessionId && sessionId !== chatSessionId) {
+            setChatSessionId(sessionId);
+            await refreshUserSessions();
           }
           
-          // Update the chat session ID if a new one was returned
-          const finalSessionId = returnedSessionId || currentSessionId;
-          if (finalSessionId && finalSessionId !== chatSessionId) {
-            console.log("Updating chat session ID:", finalSessionId);
-            setChatSessionId(finalSessionId);
-            // Refresh user sessions list
-            refreshUserSessions();
+          // Add the final response as a message
+          if (streamingResponse) {
+            await addMessage(streamingResponse, 'assistant');
           }
           
-          setCurrentResponse('');
+          setStreamingResponse('');
           setIsTyping(false);
-          setStreamCleanup(null);
+          setCurrentCancelFunction(null);
+          
+          // Focus back on textarea
+          if (textareaRef.current) {
+            textareaRef.current.focus();
+          }
         },
-        currentSessionId,
+        chatSessionId,
         user?.id
       );
-      
-      // Store the cleanup function
-      setStreamCleanup(() => cleanup);
-      
+
+      setCurrentCancelFunction(() => cancelFunction);
     } catch (error) {
-      console.error('Error getting mentor response:', error);
+      console.error('Error sending message:', error);
+      setIsTyping(false);
+      setStreamingResponse('');
+      setCurrentCancelFunction(null);
+      
       toast({
         title: "Error",
-        description: `Failed to get a response from the mentor. ${error.message || 'Please try again.'}`,
+        description: "Failed to send message. Please try again.",
         variant: "destructive",
       });
-      setIsTyping(false);
-      setCurrentResponse('');
     }
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  const handleCancel = () => {
+    if (currentCancelFunction) {
+      currentCancelFunction();
+      setCurrentCancelFunction(null);
+    }
+    setIsTyping(false);
+    setStreamingResponse('');
+    
+    // Focus back on textarea
+    if (textareaRef.current) {
+      textareaRef.current.focus();
+    }
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      handleSendMessage();
+      handleSend();
     }
   };
 
-  const handleBack = () => {
-    // Cancel any active streams before resetting
-    if (streamCleanup) {
-      streamCleanup();
-    }
-    
-    if (window.confirm('This will reset your chat. Are you sure?')) {
-      resetChat();
-    }
-  };
-
-  if (!selectedMentor) return null;
+  if (!selectedMentor) {
+    return <div>No mentor selected</div>;
+  }
 
   return (
-    <div className="flex flex-col h-[85vh] animate-fade-in">
-      <div className="mb-4 flex items-center justify-between">
-        <Button variant="ghost" size="sm" onClick={handleBack}>
-          <ArrowLeft size={16} className="mr-2" /> New Session
-        </Button>
-        <div className="flex items-center">
-          <span className="text-2xl mr-2">{selectedMentor.icon}</span>
-          <span className="font-semibold">{selectedMentor.name}</span>
+    <div className="flex flex-col h-screen bg-zinc-950 text-white">
+      {/* Header */}
+      <div className="flex items-center justify-between p-4 border-b border-zinc-800">
+        <div className="flex items-center space-x-3">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setCurrentStep('select')}
+            className="text-zinc-400 hover:text-white"
+          >
+            <ArrowLeft size={20} />
+          </Button>
+          <div className="text-2xl">{selectedMentor.icon}</div>
+          <div>
+            <h1 className="text-xl font-semibold">{selectedMentor.name}</h1>
+            <p className="text-sm text-zinc-400">{selectedMentor.expertise}</p>
+          </div>
         </div>
       </div>
 
-      <Card className="flex-1 flex flex-col overflow-hidden">
-        <div className={`w-full h-2 bg-gradient-to-r ${selectedMentor.gradient}`}></div>
-        
-        <CardContent className="flex-1 overflow-y-auto p-4 space-y-4">
-          {messages.map((message) => (
-            <div
-              key={message.id}
-              className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+      {/* Messages */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {messages.length === 0 && (
+          <div className="text-center py-8">
+            <div className="text-4xl mb-2">{selectedMentor.icon}</div>
+            <h2 className="text-xl font-semibold mb-2">Chat with {selectedMentor.name}</h2>
+            <p className="text-zinc-400 max-w-md mx-auto">
+              {selectedMentor.description}
+            </p>
+            <p className="text-zinc-500 text-sm mt-4">
+              Ask me anything related to {selectedMentor.expertise}!
+            </p>
+          </div>
+        )}
+
+        {messages.map((message) => (
+          <div
+            key={message.id}
+            className={`flex ${
+              message.role === 'user' ? 'justify-end' : 'justify-start'
+            }`}
+          >
+            <Card
+              className={`max-w-[80%] ${
+                message.role === 'user'
+                  ? 'bg-lime-500 text-black'
+                  : 'bg-zinc-800 border-zinc-700'
+              }`}
             >
-              <div
-                className={`max-w-[80%] rounded-lg px-4 py-2 ${
-                  message.role === 'user'
-                    ? 'bg-primary text-primary-foreground'
-                    : `bg-muted`
-                }`}
+              <CardContent className="p-3">
+                <div className="text-sm whitespace-pre-wrap">{message.content}</div>
+              </CardContent>
+            </Card>
+          </div>
+        ))}
+
+        {/* Streaming response */}
+        {streamingResponse && (
+          <div className="flex justify-start">
+            <Card className="max-w-[80%] bg-zinc-800 border-zinc-700">
+              <CardContent className="p-3">
+                <div className="text-sm whitespace-pre-wrap">{streamingResponse}</div>
+                <div className="flex items-center mt-2 text-zinc-400">
+                  <Loader2 className="w-3 h-3 animate-spin mr-1" />
+                  <span className="text-xs">AI is typing...</span>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        <div ref={messagesEndRef} />
+      </div>
+
+      {/* Input */}
+      <div className="border-t border-zinc-800 p-4">
+        <div className="flex space-x-2">
+          <Textarea
+            ref={textareaRef}
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyPress={handleKeyPress}
+            placeholder={`Ask ${selectedMentor.name} anything...`}
+            className="flex-1 bg-zinc-900 border-zinc-700 text-white placeholder:text-zinc-400 resize-none min-h-[60px] max-h-[120px]"
+            rows={2}
+            disabled={isTyping}
+          />
+          <div className="flex flex-col space-y-2">
+            {isTyping ? (
+              <Button
+                onClick={handleCancel}
+                variant="destructive"
+                size="icon"
+                className="self-end"
               >
-                {message.content}
-              </div>
-            </div>
-          ))}
-          
-          {isTyping && (
-            <div className="flex justify-start">
-              <div className="max-w-[80%] rounded-lg px-4 py-2 bg-muted">
-                {currentResponse || (
-                  <div className="flex space-x-2 items-center">
-                    <div className="w-2 h-2 rounded-full bg-muted-foreground animate-pulse"></div>
-                    <div className="w-2 h-2 rounded-full bg-muted-foreground animate-pulse delay-150"></div>
-                    <div className="w-2 h-2 rounded-full bg-muted-foreground animate-pulse delay-300"></div>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-          <div ref={messagesEndRef} />
-        </CardContent>
-        
-        <div className="p-4 border-t">
-          <div className="flex items-end gap-2">
-            <Textarea
-              ref={textareaRef}
-              value={userInput}
-              onChange={(e) => setUserInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Type your message..."
-              className="min-h-[60px] resize-none"
-              disabled={isTyping}
-            />
-            <Button 
-              onClick={handleSendMessage} 
-              disabled={!userInput.trim() || isTyping}
-              className={`h-[60px] ${selectedMentor.gradient ? `bg-gradient-to-r ${selectedMentor.gradient}` : ''} hover:opacity-90`}
-            >
-              <Send size={18} />
-            </Button>
+                ⏹
+              </Button>
+            ) : (
+              <Button
+                onClick={handleSend}
+                disabled={!input.trim()}
+                size="icon"
+                className="self-end bg-lime-500 hover:bg-lime-600 text-black"
+              >
+                <Send size={20} />
+              </Button>
+            )}
           </div>
         </div>
-      </Card>
+      </div>
     </div>
   );
 };

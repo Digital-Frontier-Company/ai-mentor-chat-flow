@@ -49,12 +49,13 @@ serve(async (req) => {
     
     // Determine if this is a template mentor or custom mentor
     let mentorType = "custom";
-    let mentor;
+    let systemPrompt = "";
+    let mentorName = "AI Mentor";
     
-    // First try to get the mentor from the mentors table
+    // First try to get the mentor from the mentors table (custom mentors)
     const { data: customMentor, error: customMentorError } = await supabase
       .from("mentors")
-      .select("name, description")
+      .select("name, description, system_prompt")
       .eq("id", mentorId)
       .single();
     
@@ -67,7 +68,7 @@ serve(async (req) => {
       mentorType = "template";
       const { data: templateMentor, error: templateMentorError } = await supabase
         .from("mentor_templates")
-        .select("display_name, description_for_user")
+        .select("display_name, default_mentor_name, system_prompt_base")
         .eq("template_id", mentorId)
         .single();
       
@@ -79,16 +80,17 @@ serve(async (req) => {
         throw new Error(`Mentor template not found for ID: ${mentorId}`);
       }
       
-      mentor = {
-        name: templateMentor.display_name,
-        description: templateMentor.description_for_user,
-      };
+      systemPrompt = templateMentor.system_prompt_base;
+      mentorName = templateMentor.display_name || templateMentor.default_mentor_name;
     } else {
-      mentor = customMentor;
+      // Use custom mentor
+      systemPrompt = customMentor.system_prompt || 
+        `You are ${customMentor.name}, a mentor with the following expertise: ${customMentor.description}. Your goal is to help users by providing guidance, answering questions, and offering advice in your area of expertise.`;
+      mentorName = customMentor.name;
     }
     
-    if (!mentor) {
-      throw new Error("Mentor not found");
+    if (!systemPrompt) {
+      throw new Error("System prompt not found for mentor");
     }
     
     let sessionId = chatSessionId;
@@ -102,7 +104,7 @@ serve(async (req) => {
             mentor_id: mentorId,
             mentor_type: mentorType,
             user_id: userId,
-            name: `Chat with ${mentor.name}`, // Default name based on mentor
+            name: `Chat with ${mentorName}`,
           })
           .select()
           .single();
@@ -164,15 +166,14 @@ serve(async (req) => {
       // Continue anyway to try to get a response
     }
     
-    // Build system prompt
-    const systemPrompt = 
-      `You are ${mentor.name}, a mentor with the following expertise: ${mentor.description}. Your goal is to help users by providing guidance, answering questions, and offering advice in your area of expertise.`;
-    
-    // Build the conversation history
+    // Build the conversation history with the detailed system prompt
     const conversations = [
       { role: "system", content: systemPrompt },
       ...conversationHistory
     ];
+
+    console.log("Using system prompt for", mentorName);
+    console.log("System prompt preview:", systemPrompt.substring(0, 100) + "...");
 
     // Create response headers with session ID
     const responseHeaders = { 
@@ -193,10 +194,10 @@ serve(async (req) => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "gpt-4o-mini", // Using the specified model
+          model: "gpt-4o-mini",
           messages: conversations,
           temperature: 0.7,
-          stream: true, // Enable streaming
+          stream: true,
         }),
       });
 
