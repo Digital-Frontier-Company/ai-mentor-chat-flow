@@ -6,28 +6,19 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Send, Loader2, ArrowLeft } from 'lucide-react';
 import { useMentor } from '@/contexts/MentorContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { sendHybridMessage } from '@/utils/hybridChatApi';
+import { useChat } from '@/hooks/useChat';
 import { useToast } from '@/hooks/use-toast';
 
 const ChatInterface: React.FC = () => {
   const {
     selectedMentor,
-    userPreferences,
-    messages,
-    addMessage,
-    isTyping,
-    setIsTyping,
     setCurrentStep,
-    chatSessionId,
-    setChatSessionId,
-    refreshUserSessions
   } = useMentor();
 
   const { user } = useAuth();
   const { toast } = useToast();
+  const { messages, send, isLoading } = useChat();
   const [input, setInput] = useState('');
-  const [streamingResponse, setStreamingResponse] = useState('');
-  const [currentCancelFunction, setCurrentCancelFunction] = useState<(() => void) | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -37,7 +28,7 @@ const ChatInterface: React.FC = () => {
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages, streamingResponse]);
+  }, [messages]);
 
   useEffect(() => {
     // Auto-focus the textarea when the component mounts
@@ -47,83 +38,26 @@ const ChatInterface: React.FC = () => {
   }, []);
 
   const handleSend = async () => {
-    if (!input.trim() || isTyping || !selectedMentor) return;
+    if (!input.trim() || isLoading) return;
 
     const messageToSend = input.trim();
     setInput('');
-    setIsTyping(true);
-    setStreamingResponse('');
-
-    // Add the user message immediately
-    await addMessage(messageToSend, 'user');
 
     try {
-      console.log("Starting chat request with mentor:", selectedMentor.name);
+      await send(messageToSend);
       
-      // Use the hybrid chat API (which now only uses Supabase Edge Function)
-      const cancelFunction = await sendHybridMessage(
-        messageToSend,
-        messages,
-        userPreferences,
-        selectedMentor,
-        // onChunk callback - receives incremental text
-        (chunk: string) => {
-          console.log("Received chunk, length:", chunk.length);
-          setStreamingResponse(chunk);
-        },
-        // onComplete callback - called when streaming is done
-        async (sessionId?: string) => {
-          console.log("Streaming complete, session ID:", sessionId);
-          
-          if (sessionId && sessionId !== chatSessionId) {
-            setChatSessionId(sessionId);
-            await refreshUserSessions();
-          }
-          
-          // Add the final response as a message
-          if (streamingResponse) {
-            await addMessage(streamingResponse, 'assistant');
-          }
-          
-          setStreamingResponse('');
-          setIsTyping(false);
-          setCurrentCancelFunction(null);
-          
-          // Focus back on textarea
-          if (textareaRef.current) {
-            textareaRef.current.focus();
-          }
-        },
-        chatSessionId,
-        user?.id
-      );
-
-      setCurrentCancelFunction(() => cancelFunction);
+      // Focus back on textarea
+      if (textareaRef.current) {
+        textareaRef.current.focus();
+      }
     } catch (error) {
       console.error('Error sending message:', error);
-      setIsTyping(false);
-      setStreamingResponse('');
-      setCurrentCancelFunction(null);
       
       toast({
         title: "Error",
         description: "Failed to send message. Please try again.",
         variant: "destructive",
       });
-    }
-  };
-
-  const handleCancel = () => {
-    if (currentCancelFunction) {
-      currentCancelFunction();
-      setCurrentCancelFunction(null);
-    }
-    setIsTyping(false);
-    setStreamingResponse('');
-    
-    // Focus back on textarea
-    if (textareaRef.current) {
-      textareaRef.current.focus();
     }
   };
 
@@ -195,15 +129,14 @@ const ChatInterface: React.FC = () => {
           </div>
         ))}
 
-        {/* Streaming response */}
-        {streamingResponse && (
+        {/* Loading indicator */}
+        {isLoading && (
           <div className="flex justify-start">
             <Card className="max-w-[80%] bg-zinc-800 border-zinc-700">
               <CardContent className="p-3">
-                <div className="text-sm whitespace-pre-wrap">{streamingResponse}</div>
-                <div className="flex items-center mt-2 text-zinc-400">
+                <div className="flex items-center text-zinc-400">
                   <Loader2 className="w-3 h-3 animate-spin mr-1" />
-                  <span className="text-xs">AI is typing...</span>
+                  <span className="text-xs">AI is thinking...</span>
                 </div>
               </CardContent>
             </Card>
@@ -224,28 +157,17 @@ const ChatInterface: React.FC = () => {
             placeholder={`Ask ${selectedMentor.name} anything...`}
             className="flex-1 bg-zinc-900 border-zinc-700 text-white placeholder:text-zinc-400 resize-none min-h-[60px] max-h-[120px]"
             rows={2}
-            disabled={isTyping}
+            disabled={isLoading}
           />
           <div className="flex flex-col space-y-2">
-            {isTyping ? (
-              <Button
-                onClick={handleCancel}
-                variant="destructive"
-                size="icon"
-                className="self-end"
-              >
-                ⏹
-              </Button>
-            ) : (
-              <Button
-                onClick={handleSend}
-                disabled={!input.trim()}
-                size="icon"
-                className="self-end bg-lime-500 hover:bg-lime-600 text-black"
-              >
-                <Send size={20} />
-              </Button>
-            )}
+            <Button
+              onClick={handleSend}
+              disabled={!input.trim() || isLoading}
+              size="icon"
+              className="self-end bg-lime-500 hover:bg-lime-600 text-black"
+            >
+              <Send size={20} />
+            </Button>
           </div>
         </div>
       </div>
