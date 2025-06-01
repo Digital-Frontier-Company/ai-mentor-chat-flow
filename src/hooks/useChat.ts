@@ -45,6 +45,9 @@ export const useChat = () => {
         content
       });
 
+      console.log("Sending chat request with mentor ID:", selectedMentor.id);
+      console.log("Selected mentor details:", { id: selectedMentor.id, name: selectedMentor.name, category: selectedMentor.category });
+
       // Call the chat-with-mentor edge function with streaming
       const response = await fetch(`https://bapditcjlxctrisoixpg.supabase.co/functions/v1/chat-with-mentor`, {
         method: 'POST',
@@ -62,12 +65,15 @@ export const useChat = () => {
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorText = await response.text();
+        console.error("Error response from chat-with-mentor:", response.status, errorText);
+        throw new Error(`HTTP error! status: ${response.status}, body: ${errorText}`);
       }
 
       // Get session ID from response headers if available
       const sessionId = response.headers.get('X-Chat-Session-Id');
       if (sessionId && sessionId !== chatSessionId) {
+        console.log("Setting new chat session ID:", sessionId);
         setChatSessionId(sessionId);
       }
 

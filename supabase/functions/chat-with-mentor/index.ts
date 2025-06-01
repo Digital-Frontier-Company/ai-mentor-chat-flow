@@ -53,6 +53,7 @@ serve(async (req) => {
     let systemPrompt = "";
     let mentorName = "AI Mentor";
     let mentorType = "template";
+    let actualMentorId = mentorId; // This will be the actual UUID for the session
     
     // Check if mentorId looks like a UUID (custom mentor) or template ID
     const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(mentorId);
@@ -64,7 +65,7 @@ serve(async (req) => {
       
       const { data: customMentor, error: customMentorError } = await supabase
         .from("mentors")
-        .select("name, description")
+        .select("id, name, description")
         .eq("id", mentorId)
         .single();
       
@@ -75,6 +76,7 @@ serve(async (req) => {
       
       systemPrompt = `You are ${customMentor.name}, a mentor with the following expertise: ${customMentor.description}. Your goal is to help users by providing guidance, answering questions, and offering advice in your area of expertise.`;
       mentorName = customMentor.name;
+      actualMentorId = customMentor.id; // Use the UUID from database
       console.log("Using custom mentor:", mentorName);
     } else {
       // This is a template mentor - query mentor_templates table
@@ -82,7 +84,7 @@ serve(async (req) => {
       
       const { data: templateMentor, error: templateMentorError } = await supabase
         .from("mentor_templates")
-        .select("display_name, default_mentor_name, system_prompt_base")
+        .select("id, display_name, default_mentor_name, system_prompt_base, template_id")
         .eq("template_id", mentorId)
         .single();
       
@@ -93,7 +95,8 @@ serve(async (req) => {
       
       systemPrompt = templateMentor.system_prompt_base;
       mentorName = templateMentor.display_name || templateMentor.default_mentor_name;
-      console.log("Using template mentor:", mentorName);
+      actualMentorId = templateMentor.id; // Use the UUID from database, not template_id
+      console.log("Using template mentor:", mentorName, "with UUID:", actualMentorId);
     }
     
     if (!systemPrompt) {
@@ -108,7 +111,7 @@ serve(async (req) => {
         const { data: session, error: sessionError } = await supabase
           .from("chat_sessions")
           .insert({
-            mentor_id: mentorId,
+            mentor_id: actualMentorId, // Use the actual UUID
             mentor_type: mentorType,
             user_id: userId,
             name: `Chat with ${mentorName}`,
