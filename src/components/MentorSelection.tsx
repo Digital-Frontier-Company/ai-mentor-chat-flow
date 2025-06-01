@@ -11,10 +11,16 @@ import MentorTemplateList from './mentor/MentorTemplateList';
 import UserMentorList from './mentor/UserMentorList';
 import CreateMentorForm from './mentor/CreateMentorForm';
 import LoadingState from './mentor/LoadingState';
-import { getCategoryGradient, generateLearningPath } from './mentor/MentorUtils';
 
 const MentorSelection: React.FC = () => {
-  const { mentors, userMentors, setSelectedMentor, setCurrentStep, createCustomMentor } = useMentor();
+  const { 
+    mentors, 
+    userMentors, 
+    setSelectedMentor, 
+    setCurrentStep, 
+    createCustomMentor,
+    refreshMentorTemplates 
+  } = useMentor();
   const location = useLocation();
   const { toast } = useToast();
   const { user } = useAuth();
@@ -23,42 +29,26 @@ const MentorSelection: React.FC = () => {
   const searchParams = new URLSearchParams(location.search);
   const preSelectedTemplateId = searchParams.get('template');
 
-  // Fetch mentor templates from the database
-  const { data: mentorTemplates, isLoading, error } = useQuery({
-    queryKey: ['mentorTemplates'],
+  // Use the context's mentors instead of fetching separately
+  // But also provide a way to refresh them
+  const { isLoading, error } = useQuery({
+    queryKey: ['mentorTemplatesRefresh'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('mentor_templates')
-        .select('*')
-        .order('category');
-      
-      if (error) throw error;
-      
-      console.log("Fetched mentor templates:", data);
-      
-      // Transform the data to match our existing format
-      return data.map((template: any) => ({
-        id: template.template_id,
-        name: template.display_name || template.default_mentor_name,
-        icon: template.icon,
-        description: template.description_for_user,
-        gradient: getCategoryGradient(template.category),
-        category: template.category,
-        expertise: template.default_mentor_name,
-        learningPath: generateLearningPath(template.category),
-      }));
+      await refreshMentorTemplates();
+      return mentors;
     },
+    enabled: mentors.length === 0, // Only fetch if we don't have mentors loaded
   });
 
   // Select template from URL param if present
   useEffect(() => {
-    if (preSelectedTemplateId && mentorTemplates) {
-      const template = mentorTemplates.find(t => t.id === preSelectedTemplateId);
+    if (preSelectedTemplateId && mentors.length > 0) {
+      const template = mentors.find(t => t.id === preSelectedTemplateId);
       if (template) {
         handleUseTemplate(template.id);
       }
     }
-  }, [preSelectedTemplateId, mentorTemplates]);
+  }, [preSelectedTemplateId, mentors]);
 
   // Show error if templates fail to load
   useEffect(() => {
@@ -74,8 +64,9 @@ const MentorSelection: React.FC = () => {
 
   const handleUseTemplate = (mentorId: string) => {
     try {
-      // Use either templates from context or fetched templates
-      const templatesSource = mentorTemplates || mentors;
+      console.log("Selecting mentor with ID:", mentorId);
+      console.log("Available mentors:", mentors.map(m => ({ id: m.id, name: m.name })));
+      console.log("Available user mentors:", userMentors.map(m => ({ id: m.id, name: m.name })));
       
       // Check if this is a user-created mentor
       const userMentor = userMentors.find(m => m.id === mentorId);
@@ -88,13 +79,14 @@ const MentorSelection: React.FC = () => {
       }
       
       // Otherwise check template mentors
-      const mentor = templatesSource.find(m => m.id === mentorId);
+      const mentor = mentors.find(m => m.id === mentorId);
       
       if (mentor) {
         console.log("Selected mentor template:", mentor);
         setSelectedMentor(mentor);
         setCurrentStep('customize');
       } else {
+        console.error("Mentor not found with ID:", mentorId);
         toast({
           title: "Template not found",
           description: "The selected template could not be found. Please try another one.",
@@ -132,15 +124,19 @@ const MentorSelection: React.FC = () => {
     }
   };
 
-  // Use fetched templates if available, otherwise use context templates
-  const displayMentors = mentorTemplates || mentors;
-  
-  if (isLoading) {
+  if (isLoading && mentors.length === 0) {
     return <LoadingState />;
   }
 
   return (
     <div className="space-y-6">
+      {/* Debug info in development */}
+      {process.env.NODE_ENV === 'development' && (
+        <div className="text-xs text-zinc-500 p-2 bg-zinc-900 rounded">
+          Templates loaded: {mentors.length} | User mentors: {userMentors.length}
+        </div>
+      )}
+
       {/* Create custom mentor button - only show if user is logged in */}
       {user && (
         <CreateMentorForm onCreateMentor={handleCreateMentor} />
@@ -152,7 +148,20 @@ const MentorSelection: React.FC = () => {
       )}
 
       {/* Template mentors */}
-      <MentorTemplateList mentors={displayMentors} onSelect={handleUseTemplate} />
+      <MentorTemplateList mentors={mentors} onSelect={handleUseTemplate} />
+      
+      {/* Show message if no mentors are available */}
+      {mentors.length === 0 && !isLoading && (
+        <div className="text-center py-8">
+          <p className="text-zinc-400 mb-4">No mentor templates available at the moment.</p>
+          <button 
+            onClick={() => refreshMentorTemplates()}
+            className="text-lime-400 hover:text-lime-300 underline"
+          >
+            Try refreshing templates
+          </button>
+        </div>
+      )}
     </div>
   );
 };

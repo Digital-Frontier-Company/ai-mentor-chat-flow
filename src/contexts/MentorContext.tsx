@@ -58,6 +58,7 @@ interface MentorContextType {
   setChatSessionId: (id: string | null) => void;
   createCustomMentor: (mentorData: { name: string, description: string, icon: string, color: string, customPrompt?: string }) => Promise<MentorType | null>;
   loadUserMentors: () => Promise<void>;
+  refreshMentorTemplates: () => Promise<void>;
 }
 
 export const MentorContext = createContext<MentorContextType | null>(null);
@@ -80,9 +81,9 @@ export const MentorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const { user } = useAuth();
   const { toast } = useToast();
 
-  // Load mentor templates from database on first render
+  // Load initial data when component mounts or user changes
   useEffect(() => {
-    loadMentorTemplates();
+    refreshMentorTemplates();
     
     if (user) {
       refreshUserSessions();
@@ -90,38 +91,60 @@ export const MentorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   }, [user]);
 
-  // Load mentor templates from the database
-  const loadMentorTemplates = async () => {
+  // Enhanced mentor template loading with better error handling and logging
+  const refreshMentorTemplates = async () => {
     try {
+      console.log("Loading mentor templates from database...");
+      
       const { data, error } = await supabase
         .from('mentor_templates')
-        .select('*');
+        .select('*')
+        .order('category, display_name');
       
-      if (error) throw error;
+      if (error) {
+        console.error("Error loading mentor templates:", error);
+        throw error;
+      }
+      
+      console.log("Raw mentor templates data:", data);
       
       if (data && data.length > 0) {
-        // Transform to MentorType format
-        const transformedMentors = data.map(template => ({
-          id: template.template_id,
-          name: template.display_name || template.default_mentor_name,
-          icon: template.icon || '🧠',
-          description: template.description_for_user,
-          gradient: getCategoryGradient(template.category),
-          category: template.category,
-          expertise: template.default_mentor_name,
-          learningPath: generateLearningPath(template.category),
-        }));
+        // Transform to MentorType format with better field mapping
+        const transformedMentors = data.map(template => {
+          const mentor = {
+            id: template.template_id,
+            name: template.display_name || template.default_mentor_name || 'Unnamed Mentor',
+            icon: template.icon || '🧠',
+            description: template.description_for_user || 'No description available',
+            gradient: getCategoryGradient(template.category),
+            category: template.category || 'general',
+            expertise: template.default_mentor_name || template.display_name || 'General Expertise',
+            learningPath: generateLearningPath(template.category || 'general'),
+          };
+          
+          console.log(`Processed mentor template: ${mentor.name} (${mentor.id})`);
+          return mentor;
+        });
         
+        console.log(`Successfully loaded ${transformedMentors.length} mentor templates`);
         setMentors(transformedMentors);
+      } else {
+        console.log("No mentor templates found in database");
+        setMentors([]);
       }
     } catch (error) {
       console.error('Error loading mentor templates:', error);
-      // Don't show a toast here as it might be distracting on first load
-      // We'll use the fallback templates instead
+      toast({
+        title: "Error loading mentor templates",
+        description: "Failed to load mentor templates from database. Using fallback data.",
+        variant: "destructive",
+      });
+      
+      // Set empty array as fallback
+      setMentors([]);
     }
   };
 
-  // Refresh the user's chat sessions
   const refreshUserSessions = async () => {
     if (!user) return;
     
@@ -148,7 +171,6 @@ export const MentorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   };
 
-  // Load mentors created by the user
   const loadUserMentors = async () => {
     if (!user) return;
     
@@ -185,7 +207,6 @@ export const MentorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   };
 
-  // Create a custom mentor
   const createCustomMentor = async (mentorData: { 
     name: string, 
     description: string, 
@@ -264,7 +285,6 @@ export const MentorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   };
 
-  // Load a specific chat session
   const loadChatSession = async (sessionId: string) => {
     if (!user) return false;
     
@@ -463,6 +483,7 @@ export const MentorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       case 'creative': return 'from-pink-500 to-rose-700';
       case 'language': return 'from-blue-500 to-indigo-700';
       case 'education': return 'from-amber-500 to-orange-700';
+      case 'finance': return 'from-green-500 to-emerald-700';
       case 'custom': return 'from-lime-500 to-lime-700';
       default: return 'from-gray-500 to-gray-700';
     }
@@ -521,6 +542,16 @@ export const MentorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         { name: 'Technological Advances' },
         { name: 'Historical Analysis' },
       ],
+      'finance': [
+        { name: 'Market Fundamentals' },
+        { name: 'Risk Assessment' },
+        { name: 'Technical Analysis' },
+        { name: 'Portfolio Theory' },
+        { name: 'Risk Management' },
+        { name: 'Trading Psychology' },
+        { name: 'Advanced Strategies' },
+        { name: 'Performance Review' },
+      ],
     };
     
     return paths[category] || paths['technology'];
@@ -549,6 +580,7 @@ export const MentorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         setChatSessionId,
         createCustomMentor,
         loadUserMentors,
+        refreshMentorTemplates,
       }}
     >
       {children}
