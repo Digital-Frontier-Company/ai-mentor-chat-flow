@@ -13,6 +13,8 @@ const ChatInterface: React.FC = () => {
   const {
     selectedMentor,
     setCurrentStep,
+    chatSessionId,
+    setChatSessionId,
   } = useMentor();
 
   const { user } = useAuth();
@@ -39,6 +41,24 @@ const ChatInterface: React.FC = () => {
 
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
+
+    if (!selectedMentor) {
+      toast({
+        title: "Error",
+        description: "Please select a mentor first.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!user) {
+      toast({
+        title: "Error",
+        description: "Please sign in to chat with mentors.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     const messageToSend = input.trim();
     setInput('');
@@ -136,7 +156,7 @@ const ChatInterface: React.FC = () => {
               <CardContent className="p-3">
                 <div className="flex items-center text-zinc-400">
                   <Loader2 className="w-3 h-3 animate-spin mr-1" />
-                  <span className="text-xs">AI is thinking...</span>
+                  <span className="text-xs">{selectedMentor.name} is thinking...</span>
                 </div>
               </CardContent>
             </Card>
